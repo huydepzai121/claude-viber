@@ -1,9 +1,13 @@
-import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
+import { ArrowRight, Folder, Loader2, Plus, Square } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import AttachmentPreviewList from '@/components/AttachmentPreviewList';
+import FolderPicker from '@/components/FolderPicker';
+import ModelSelectorDropdown from '@/components/ModelSelectorDropdown';
+import SlashCommandMenu from '@/components/SlashCommandMenu';
+import { useTranslation } from '@/i18n/context';
 
-import type { ChatModelPreference, SmartModelVariant } from '../../shared/types/ipc';
+import type { ChatModelPreference, SessionInitData, SlashCommand } from '../../shared/types/ipc';
 
 interface ChatInputProps {
   value: string;
@@ -27,6 +31,10 @@ interface ChatInputProps {
   modelPreference: ChatModelPreference;
   onModelPreferenceChange: (preference: ChatModelPreference) => void;
   isModelPreferenceUpdating?: boolean;
+  currentModelId?: string;
+  onModelChange?: (modelId: string) => void;
+  slashCommands?: SlashCommand[];
+  sessionInitData?: SessionInitData | null;
 }
 
 export default function ChatInput({
@@ -42,9 +50,13 @@ export default function ChatInput({
   onRemoveAttachment,
   canSend,
   attachmentError,
-  modelPreference,
-  onModelPreferenceChange,
-  isModelPreferenceUpdating = false
+  modelPreference: _modelPreference,
+  onModelPreferenceChange: _onModelPreferenceChange,
+  isModelPreferenceUpdating: _isModelPreferenceUpdating = false,
+  currentModelId = 'claude-sonnet-4-6',
+  onModelChange,
+  slashCommands = [],
+  sessionInitData
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -53,38 +65,94 @@ export default function ChatInput({
   const MAX_TEXTAREA_HEIGHT = 200;
   const lastReportedHeightRef = useRef<number | null>(null);
   const dragCounterRef = useRef(0);
-  const lastSmartPreferenceRef = useRef<ChatModelPreference>('smart-sonnet');
   const [isDragActive, setIsDragActive] = useState(false);
   const computedCanSend = canSend ?? Boolean(value.trim());
-  const isSmartMode = modelPreference !== 'fast';
-  const smartVariant = modelPreference === 'smart-opus' ? 'opus' : 'sonnet';
+  const { t } = useTranslation();
+  const [currentWorkspace, setCurrentWorkspace] = useState<string | null>(null);
+  const [recentFolders, setRecentFolders] = useState<string[]>([]);
 
-  const modelPillClass = (isActive: boolean, size: 'default' | 'compact' = 'default') =>
-    `rounded-full ${size === 'compact' ? 'px-2.5 py-1' : 'px-3 py-1'} text-xs font-semibold transition ${
-      isActive ?
-        'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
-      : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
-    } ${isModelPreferenceUpdating ? 'opacity-70' : ''}`;
+  // Slash command autocomplete state
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
+  const [slashMenuDismissed, setSlashMenuDismissed] = useState(false);
+  const [filesystemCommands, setFilesystemCommands] = useState<SlashCommand[]>([]);
+  const slashFilter = value.startsWith('/') ? value.slice(1).split(' ')[0] : '';
+  const slashMenuId = 'slash-command-menu';
 
-  const handleModelPreferenceSelect = (preference: ChatModelPreference) => {
-    if (preference === modelPreference) return;
-    if (isModelPreferenceUpdating) return;
-    onModelPreferenceChange(preference);
-  };
+  // Load commands from ~/.claude/ on mount
+  useEffect(() => {
+    window.electron.config
+      .getClaudeCommands()
+      .then(({ commands }) => {
+        setFilesystemCommands(commands);
+      })
+      .catch(() => {
+        // ignore — filesystem may not be accessible
+      });
+    // Load current workspace
+    window.electron.config
+      .getWorkspaceDir()
+      .then(({ workspaceDir }) => {
+        setCurrentWorkspace(workspaceDir);
+      })
+      .catch(() => {});
+    // Load recent folders
+    window.electron.config
+      .getRecentFolders()
+      .then(({ folders }) => {
+        setRecentFolders(folders);
+      })
+      .catch(() => {});
 
-  const handlePrimaryModelToggle = (mode: 'fast' | 'smart') => {
-    if (mode === 'fast') {
-      handleModelPreferenceSelect('fast');
-      return;
-    }
+    const unsubWorkspace = window.electron.config.onWorkspaceChanged(({ workspaceDir }) => {
+      setCurrentWorkspace(workspaceDir);
+      window.electron.config
+        .getRecentFolders()
+        .then(({ folders }) => setRecentFolders(folders))
+        .catch(() => {});
+    });
 
-    const nextPreference = isSmartMode ? modelPreference : lastSmartPreferenceRef.current;
-    handleModelPreferenceSelect(nextPreference);
-  };
+    return () => {
+      unsubWorkspace();
+    };
+  }, []);
 
-  const handleSmartModelToggle = (variant: SmartModelVariant) => {
-    const nextPreference: ChatModelPreference = variant === 'opus' ? 'smart-opus' : 'smart-sonnet';
-    handleModelPreferenceSelect(nextPreference);
+  // Build effective commands: prefer SDK data, fallback to init data, then filesystem
+  const effectiveCommands: SlashCommand[] =
+    slashCommands.length > 0 ?
+      slashCommands.map((cmd) => ({
+        ...cmd,
+        name: cmd.name.startsWith('/') ? cmd.name : `/${cmd.name}`
+      }))
+    : (sessionInitData?.slashCommands ?? []).length > 0 ?
+      (sessionInitData?.slashCommands ?? []).map((name) => ({
+        name: name.startsWith('/') ? name : `/${name}`,
+        description: '',
+        argumentHint: ''
+      }))
+    : filesystemCommands;
+
+  const filteredCommands = effectiveCommands.filter((cmd) =>
+    cmd.name.toLowerCase().includes(slashFilter.toLowerCase())
+  );
+
+  // Derive showSlashMenu: starts with /, no space yet, has matches, not dismissed
+  const showSlashMenu =
+    value.startsWith('/') &&
+    !value.includes(' ') &&
+    filteredCommands.length > 0 &&
+    !slashMenuDismissed;
+
+  // Clamp selectedIndex to valid range
+  const clampedSlashIndex = Math.min(slashSelectedIndex, Math.max(0, filteredCommands.length - 1));
+
+  // Active descendant id for ARIA
+  const activeDescendantId =
+    showSlashMenu ? `${slashMenuId}-option-${clampedSlashIndex}` : undefined;
+
+  const handleSlashSelect = (command: SlashCommand) => {
+    const name = command.name.startsWith('/') ? command.name : `/${command.name}`;
+    onChange(name + ' ');
+    setSlashMenuDismissed(false);
   };
 
   const reportHeight = useCallback(
@@ -106,7 +174,6 @@ export default function ChatInput({
     textarea.style.height = `${Math.max(measuredHeight, MIN_TEXTAREA_HEIGHT)}px`;
   };
 
-  // Auto-focus when autoFocus is true
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
       textareaRef.current.focus();
@@ -114,6 +181,35 @@ export default function ChatInput({
   }, [autoFocus]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle slash command menu navigation
+    if (showSlashMenu) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) => (prev < filteredCommands.length - 1 ? prev + 1 : 0));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredCommands.length - 1));
+        return;
+      }
+      if (e.key === 'Enter' && filteredCommands[slashSelectedIndex]) {
+        e.preventDefault();
+        handleSlashSelect(filteredCommands[slashSelectedIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashMenuDismissed(true);
+        return;
+      }
+      if (e.key === 'Tab' && filteredCommands[slashSelectedIndex]) {
+        e.preventDefault();
+        handleSlashSelect(filteredCommands[slashSelectedIndex]);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isLoading && computedCanSend) {
@@ -147,9 +243,15 @@ export default function ChatInput({
   };
 
   const handleInputContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Only focus if clicking on the container itself, not on interactive elements
     const target = e.target as HTMLElement;
-    if (target.tagName !== 'TEXTAREA' && target.tagName !== 'BUTTON' && textareaRef.current) {
+    const tag = target.tagName;
+    if (
+      tag !== 'TEXTAREA' &&
+      tag !== 'BUTTON' &&
+      tag !== 'SELECT' &&
+      tag !== 'OPTION' &&
+      textareaRef.current
+    ) {
       textareaRef.current.focus();
     }
   };
@@ -214,12 +316,6 @@ export default function ChatInput({
     adjustTextareaHeight();
   }, [value]);
 
-  useEffect(() => {
-    if (isSmartMode) {
-      lastSmartPreferenceRef.current = modelPreference;
-    }
-  }, [isSmartMode, modelPreference]);
-
   useLayoutEffect(() => {
     const element = containerRef.current;
     if (!element) return;
@@ -244,151 +340,178 @@ export default function ChatInput({
   return (
     <div
       ref={containerRef}
-      className="fixed inset-x-0 bottom-0 z-10 px-4 pt-6 pb-5 [-webkit-app-region:no-drag]"
+      className="sticky inset-x-0 bottom-0 z-10 px-4 pt-6 pb-5 [-webkit-app-region:no-drag]"
     >
       <div className="mx-auto max-w-3xl">
-        <div
-          className={`rounded-3xl bg-white/95 p-2 shadow-[0_20px_60px_rgba(15,23,42,0.15)] backdrop-blur-xl dark:bg-neutral-900/90 dark:shadow-[0_16px_50px_rgba(0,0,0,0.65)] ${
-            isDragActive ?
-              'ring-2 ring-neutral-400/80 dark:ring-neutral-500/80'
-            : 'ring-1 ring-neutral-200/80 dark:ring-neutral-700/70'
-          }`}
-          onClick={handleInputContainerClick}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileInputChange}
+        <div className="relative">
+          <SlashCommandMenu
+            commands={filteredCommands}
+            selectedIndex={clampedSlashIndex}
+            onSelect={handleSlashSelect}
+            visible={showSlashMenu}
+            menuId={slashMenuId}
           />
-
-          {attachments.length > 0 && (
-            <AttachmentPreviewList
-              attachments={attachments.map((attachment) => ({
-                id: attachment.id,
-                name: attachment.file.name,
-                size: attachment.file.size,
-                isImage: attachment.isImage,
-                previewUrl: attachment.previewUrl
-              }))}
-              onRemove={handleRemoveAttachmentClick}
-              className="mb-2 px-2"
+          <div
+            className={`rounded-2xl border bg-[var(--bg-surface)] p-2 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${
+              isDragActive ? 'border-[var(--accent)]/60' : 'border-[var(--border-medium)]'
+            }`}
+            onClick={handleInputContainerClick}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileInputChange}
             />
-          )}
 
-          {attachmentError && (
-            <p className="px-3 pb-2 text-xs text-red-600 dark:text-red-400">{attachmentError}</p>
-          )}
+            {attachments.length > 0 && (
+              <AttachmentPreviewList
+                attachments={attachments.map((attachment) => ({
+                  id: attachment.id,
+                  name: attachment.file.name,
+                  size: attachment.file.size,
+                  isImage: attachment.isImage,
+                  previewUrl: attachment.previewUrl
+                }))}
+                onRemove={handleRemoveAttachmentClick}
+                className="mb-2 px-2"
+              />
+            )}
 
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="How can I help you today?"
-            rows={1}
-            className="w-full resize-none border-0 bg-transparent px-3 py-2 text-neutral-900 placeholder-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder-neutral-500"
-            style={{
-              minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
-              maxHeight: `${MAX_TEXTAREA_HEIGHT}px`
-            }}
-            onInput={handleTextareaInput}
-          />
-          <div className="flex flex-wrap items-center justify-between gap-3 px-2 pt-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAttachmentButtonClick}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-neutral-200/80 bg-neutral-100 text-neutral-600 transition hover:bg-neutral-200 focus:ring-2 focus:ring-neutral-400 focus:outline-none dark:border-neutral-700/70 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 dark:focus:ring-neutral-500"
-                title="Attach files"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <div className="flex h-10 items-center gap-2 rounded-full border border-neutral-200/80 bg-neutral-100 px-2 py-1 transition dark:border-neutral-700/70 dark:bg-neutral-800">
+            {attachmentError && (
+              <p className="px-3 pb-2 text-xs text-[var(--error)]">{attachmentError}</p>
+            )}
+
+            <div className="relative">
+              {/* Styled overlay for slash command coloring — only while typing command name (no space yet) */}
+              {value.startsWith('/') && !value.includes(' ') && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 text-[length:inherit] leading-[inherit] break-words whitespace-pre-wrap"
+                  style={{
+                    fontFamily: 'inherit',
+                    fontSize: 'inherit',
+                    lineHeight: 'inherit',
+                    minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
+                    maxHeight: `${MAX_TEXTAREA_HEIGHT}px`
+                  }}
+                >
+                  <span className="font-semibold text-[var(--accent)]">{value}</span>
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => {
+                  onChange(e.target.value);
+                  setSlashSelectedIndex(0);
+                  setSlashMenuDismissed(false);
+                }}
+                onKeyDown={handleKeyDown}
+                onPaste={handlePaste}
+                placeholder={t('chat.placeholder')}
+                rows={1}
+                role="combobox"
+                aria-expanded={showSlashMenu}
+                aria-haspopup="listbox"
+                aria-controls={showSlashMenu ? slashMenuId : undefined}
+                aria-activedescendant={activeDescendantId}
+                aria-autocomplete="list"
+                className={`w-full resize-none border-0 bg-transparent px-3 py-2 pr-12 placeholder-[var(--text-muted)] focus:outline-none ${
+                  value.startsWith('/') && !value.includes(' ') ?
+                    'text-transparent caret-[var(--text-primary)]'
+                  : 'text-[var(--text-primary)]'
+                }`}
+                style={{
+                  minHeight: `${MIN_TEXTAREA_HEIGHT}px`,
+                  maxHeight: `${MAX_TEXTAREA_HEIGHT}px`
+                }}
+                onInput={handleTextareaInput}
+              />
+              {/* Send/Stop button inside textarea area */}
+              <div className="absolute right-2 bottom-2">
+                <button
+                  onClick={isLoading && onStopStreaming ? onStopStreaming : onSend}
+                  disabled={isLoading && onStopStreaming ? false : !computedCanSend || isLoading}
+                  aria-label={
+                    isLoading && onStopStreaming ? t('chat.stopStreaming') : t('chat.send')
+                  }
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+                    isLoading && onStopStreaming ?
+                      'bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-raised)]'
+                    : computedCanSend ?
+                      'bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-80'
+                    : 'text-[var(--text-disabled)]'
+                  }`}
+                >
+                  {isLoading ?
+                    onStopStreaming ?
+                      <Square className="h-4 w-4" />
+                    : <Loader2 className="h-4 w-4 animate-spin" />
+                  : <ArrowRight className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-2 pt-2">
+              <div className="flex items-center gap-1">
+                {Boolean((window as any).__isWebMode) ? (
+                  <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-[var(--text-secondary)]">
+                    <Folder className="h-4 w-4" />
+                    <span>{currentWorkspace ? currentWorkspace.split('/').pop() : 'Workspace'}</span>
+                    <a
+                      href="https://www.npmjs.com/package/claude-viber"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-1 text-xs text-[var(--accent)] hover:underline"
+                      title="npm i -g claude-viber && claude-viber-app"
+                    >
+                      Cài app
+                    </a>
+                  </div>
+                ) : (
+                  <FolderPicker
+                    currentFolder={currentWorkspace}
+                    recentFolders={recentFolders}
+                    onFolderChange={(folder) => {
+                      setCurrentWorkspace(folder);
+                      window.electron.config.setWorkspaceDir(folder).catch((err) => {
+                        console.error('Failed to set workspace:', err);
+                      });
+                      window.electron.config
+                        .addRecentFolder(folder)
+                        .then(() => {
+                          window.electron.config
+                            .getRecentFolders()
+                            .then(({ folders }) => {
+                              setRecentFolders(folders);
+                            })
+                            .catch(() => {});
+                        })
+                        .catch(() => {});
+                    }}
+                  />
+                )}
                 <button
                   type="button"
-                  aria-pressed={!isSmartMode}
-                  onClick={() => handlePrimaryModelToggle('fast')}
-                  disabled={isModelPreferenceUpdating}
-                  className={modelPillClass(!isSmartMode)}
+                  onClick={handleAttachmentButtonClick}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
+                  title={t('attachments.attach')}
                 >
-                  Fast
+                  <Plus className="h-4 w-4" />
                 </button>
-                <div className="relative flex items-center overflow-hidden">
-                  <div
-                    className={`transition-[max-width,opacity,transform] duration-200 ease-out ${
-                      isSmartMode ?
-                        'pointer-events-none max-w-0 scale-95 opacity-0'
-                      : 'max-w-[96px] scale-100 opacity-100'
-                    }`}
-                    aria-hidden={isSmartMode}
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={isSmartMode}
-                      onClick={() => handlePrimaryModelToggle('smart')}
-                      disabled={isModelPreferenceUpdating}
-                      className={modelPillClass(isSmartMode)}
-                    >
-                      Smart
-                    </button>
-                  </div>
-                  <div
-                    className={`flex items-center gap-1.5 transition-[max-width,opacity,transform] duration-200 ease-out ${
-                      isSmartMode ?
-                        'max-w-[210px] scale-100 opacity-100'
-                      : 'pointer-events-none max-w-0 scale-95 opacity-0'
-                    }`}
-                    aria-hidden={!isSmartMode}
-                  >
-                    <button
-                      type="button"
-                      aria-pressed={smartVariant === 'sonnet'}
-                      onClick={() => handleSmartModelToggle('sonnet')}
-                      disabled={!isSmartMode || isModelPreferenceUpdating}
-                      className={modelPillClass(smartVariant === 'sonnet', 'compact')}
-                      title="claude-sonnet-4-5-20250929"
-                    >
-                      Sonnet
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={smartVariant === 'opus'}
-                      onClick={() => handleSmartModelToggle('opus')}
-                      disabled={!isSmartMode || isModelPreferenceUpdating}
-                      className={modelPillClass(smartVariant === 'opus', 'compact')}
-                      title="claude-opus-4-5-20251101"
-                    >
-                      Opus
-                    </button>
-                  </div>
-                </div>
               </div>
-              {isModelPreferenceUpdating && (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-neutral-400 dark:text-neutral-300" />
-              )}
+              <div className="flex items-center gap-1">
+                <ModelSelectorDropdown
+                  currentModelId={currentModelId}
+                  onModelChange={(modelId) => onModelChange?.(modelId)}
+                />
+              </div>
             </div>
-            <button
-              onClick={isLoading && onStopStreaming ? onStopStreaming : onSend}
-              disabled={isLoading && onStopStreaming ? false : !computedCanSend || isLoading}
-              className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                isLoading && onStopStreaming ?
-                  'bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-600'
-                : 'bg-neutral-900 text-white hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200'
-              }`}
-            >
-              {isLoading ?
-                onStopStreaming ?
-                  <Square className="h-5 w-5" />
-                : <Loader2 className="h-5 w-5 animate-spin" />
-              : <ArrowUp className="h-5 w-5" />}
-            </button>
           </div>
         </div>
       </div>

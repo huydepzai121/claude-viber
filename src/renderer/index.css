@@ -2,10 +2,51 @@
 
 @plugin '@tailwindcss/typography';
 
-/* Custom scrollbar styling for a cleaner look */
+/* ===== Warm Dark Theme (Claude Cowork Style) ===== */
+:root {
+  /* Backgrounds */
+  --bg-deepest: #121212;
+  --bg-primary: #1a1a1a;
+  --bg-surface: #242424;
+  --bg-elevated: #2a2a2a;
+  --bg-raised: #333333;
+
+  /* Text */
+  --text-primary: #e8e4de;
+  --text-secondary: #a8a29e;
+  --text-muted: #78716c;
+  --text-disabled: #57534e;
+
+  /* Accent (coral/salmon) */
+  --accent: #ff8a80;
+  --accent-hover: #ff6b6b;
+  --accent-active: #f85149;
+  --accent-deep: #da3633;
+
+  /* Secondary accent (blue for toggles) */
+  --accent-blue: #58a6ff;
+  --accent-blue-hover: #79b8ff;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  /* Status */
+  --success: #3fb950;
+  --error: #f85149;
+  --warning: #d29922;
+  --info: #58a6ff;
+
+  /* Sidebar */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 56px;
+}
+
+/* ===== Scrollbar (dark purple only) ===== */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(115 115 115 / 0.3) transparent;
+  scrollbar-color: var(--border-medium) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -18,30 +59,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgb(115 115 115 / 0.3);
+  background-color: var(--border-medium);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(115 115 115 / 0.5);
+  background-color: var(--border-strong);
 }
 
-/* Dark mode scrollbar */
-@media (prefers-color-scheme: dark) {
-  * {
-    scrollbar-color: rgb(163 163 163 / 0.3) transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background-color: rgb(163 163 163 / 0.3);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(163 163 163 / 0.5);
-  }
-}
-
-/* Shimmer animation for thinking state */
+/* ===== Animations ===== */
 @keyframes shimmer {
   0% {
     opacity: 1;
@@ -58,7 +84,7 @@
   animation: shimmer 2s ease-in-out infinite;
 }
 
-/* Terminal-like monospace typography for tool calls */
+/* ===== Typography ===== */
 .tool-input {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Roboto Mono', monospace;
   font-size: 13px;
@@ -71,7 +97,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Clean code block styling */
 pre code {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Roboto Mono', monospace;
   font-size: 13px;
@@ -79,77 +104,44 @@ pre code {
   letter-spacing: -0.01em;
 }
 
-/* Tool container styling to mirror drawer cards */
+/* ===== Tool container ===== */
 .tool-container {
   border-radius: 1rem;
-  border: 1px solid rgb(23 23 23 / 0.08);
-  background: rgb(255 255 255 / 0.95);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
   padding: 0.75rem 1rem;
   box-shadow:
-    0 4px 12px rgb(15 23 42 / 0.02),
-    0 1px 2px rgb(15 23 42 / 0.02);
+    0 8px 16px rgb(0 0 0 / 0.25),
+    0 2px 4px rgb(0 0 0 / 0.2);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
 
 .tool-container:hover {
-  border-color: rgb(23 23 23 / 0.2);
+  border-color: var(--border-medium);
   box-shadow:
-    0 6px 16px rgb(15 23 42 / 0.04),
-    0 1px 4px rgb(15 23 42 / 0.04);
+    0 10px 20px rgb(0 0 0 / 0.3),
+    0 3px 6px rgb(0 0 0 / 0.25);
 }
 
-@media (prefers-color-scheme: dark) {
-  .tool-container {
-    border-color: rgb(82 82 82 / 0.8);
-    background: rgb(9 9 11 / 0.9);
-    box-shadow:
-      0 8px 16px rgb(0 0 0 / 0.25),
-      0 2px 4px rgb(0 0 0 / 0.2);
-  }
-
-  .tool-container:hover {
-    border-color: rgb(163 163 163 / 0.4);
-    box-shadow:
-      0 10px 20px rgb(0 0 0 / 0.3),
-      0 3px 6px rgb(0 0 0 / 0.25);
-  }
-}
-
-/* Create border with gaps for icons in expanded sections */
+/* ===== Expanded block section border ===== */
 .expanded-block-section {
   position: relative;
-  background-image: linear-gradient(
-    to bottom,
-    rgb(229 229 229 / 0.3) 0%,
-    rgb(229 229 229 / 0.3) 100%
-  );
+  background-image: linear-gradient(to bottom, var(--border-subtle) 0%, var(--border-subtle) 100%);
   background-size: 1px 100%;
   background-position: 0 0;
   background-repeat: repeat-y;
-}
-
-@media (prefers-color-scheme: dark) {
-  .expanded-block-section {
-    background-image: linear-gradient(to bottom, rgb(64 64 64 / 0.3) 0%, rgb(64 64 64 / 0.3) 100%);
-  }
 }
 
 /* Align tool call icons with border center and create gap */
 .expanded-block-section .flex.h-4.w-4.items-center.justify-center {
   position: relative;
   margin-left: -18.5px;
-  background-color: rgb(255 255 255);
+  background-color: var(--bg-primary);
   z-index: 1;
   padding: 3px 2px;
   border-radius: 2px;
-}
-
-@media (prefers-color-scheme: dark) {
-  .expanded-block-section .flex.h-4.w-4.items-center.justify-center {
-    background-color: rgb(23 23 23);
-  }
 }
 
 /* Align thinking badge icon with border center and create gap */
@@ -172,15 +164,9 @@ pre code {
   top: 50%;
   transform: translateY(-50%);
   height: 18px;
-  background-color: rgb(255 255 255);
+  background-color: var(--bg-primary);
   border-radius: 2px;
   z-index: 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .expanded-block-section .flex.items-center.gap-1\.5::before {
-    background-color: rgb(23 23 23);
-  }
 }
 
 /* Remove extra indent and border from expanded tool calls and thinking blocks */
@@ -194,4 +180,155 @@ pre code {
   margin-left: 0 !important;
   border-left: none !important;
   padding-left: 0 !important;
+}
+
+/* ===== Markdown Body Styles ===== */
+.markdown-body h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+  color: var(--text-primary);
+}
+.markdown-body h2 {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0.8em 0 0.4em;
+  color: var(--text-primary);
+}
+.markdown-body h3 {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+  color: var(--text-primary);
+}
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+  color: var(--text-secondary);
+}
+
+.markdown-body p {
+  margin: 0.4em 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+}
+.markdown-body li {
+  margin: 0.15em 0;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--bg-elevated);
+  margin: 0.5em 0;
+  padding: 0.5em 1em;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--text-secondary);
+}
+
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.9em;
+}
+
+.markdown-body th {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  padding: 0.5em 0.75em;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.markdown-body td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.4em 0.75em;
+  color: var(--text-secondary);
+}
+
+.markdown-body tr:nth-child(even) td {
+  background: var(--bg-surface);
+}
+
+.markdown-body pre {
+  background: var(--bg-deepest);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 1em;
+  margin: 0.5em 0;
+  overflow-x: auto;
+}
+
+.markdown-body code {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Roboto Mono', monospace;
+  font-size: 0.9em;
+}
+
+.markdown-body :not(pre) > code {
+  background: var(--bg-elevated);
+  padding: 0.15em 0.4em;
+  border-radius: 0.25rem;
+  color: var(--accent-hover);
+}
+
+.markdown-body hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 1em 0;
+}
+
+/* highlight.js dark theme overrides */
+.hljs {
+  background: transparent !important;
+  color: var(--text-secondary);
+}
+.hljs-keyword {
+  color: #c792ea;
+}
+.hljs-string {
+  color: #c3e88d;
+}
+.hljs-number {
+  color: #f78c6c;
+}
+.hljs-comment {
+  color: var(--text-disabled);
+  font-style: italic;
+}
+.hljs-function {
+  color: #82aaff;
+}
+.hljs-title {
+  color: #ffcb6b;
+}
+.hljs-built_in {
+  color: #89ddff;
+}
+.hljs-type {
+  color: #ffcb6b;
+}
+.hljs-attr {
+  color: var(--accent-hover);
+}
+.hljs-variable {
+  color: #f07178;
+}
+.hljs-params {
+  color: var(--text-secondary);
+}
+.hljs-meta {
+  color: #89ddff;
+}
+.hljs-regexp {
+  color: #89ddff;
+}
+.hljs-literal {
+  color: #f78c6c;
 }

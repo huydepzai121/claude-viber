@@ -2,6 +2,7 @@ import { Clock, MessageSquare, Plus, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { Conversation } from '@/electron';
+import { useTranslation } from '@/i18n/context';
 
 const truncateText = (text: string, maxLength: number = 90) => {
   if (text.length <= maxLength) {
@@ -27,6 +28,7 @@ export default function ChatHistoryDrawer({
 }: ChatHistoryDrawerProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { t } = useTranslation();
   const relativeTimeFormatter = useMemo(
     () =>
       new Intl.RelativeTimeFormat(undefined, {
@@ -57,12 +59,11 @@ export default function ChatHistoryDrawer({
 
   const handleDelete = async (e: React.MouseEvent, conversationId: string) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this conversation?')) {
+    if (confirm(t('chatHistory.deleteConfirm'))) {
       try {
         const response = await window.electron.conversation.delete(conversationId);
         if (response.success) {
           await loadConversations();
-          // If the deleted conversation is the currently active one, reset to blank page and close drawer
           if (conversationId === currentConversationId) {
             await onNewChat();
             onClose();
@@ -86,7 +87,6 @@ export default function ChatHistoryDrawer({
           role: string;
           content: string | { type: string; text?: string }[];
         }>;
-        // Find the last user message (iterate in reverse)
         let lastUserMessage: (typeof parsed)[0] | undefined;
         for (let i = parsed.length - 1; i >= 0; i--) {
           if (parsed[i].role === 'user') {
@@ -112,11 +112,10 @@ export default function ChatHistoryDrawer({
       } catch {
         acc[conversation.id] = '';
       }
-      acc[conversation.id] =
-        acc[conversation.id] || 'Tap to resume this conversation from where you left off.';
+      acc[conversation.id] = acc[conversation.id] || t('chatHistory.defaultPreview');
       return acc;
     }, {});
-  }, [conversations]);
+  }, [conversations, t]);
 
   const formatRelativeDate = useCallback(
     (timestamp: number) => {
@@ -168,22 +167,20 @@ export default function ChatHistoryDrawer({
         }`}
         aria-hidden={!isOpen}
       >
-        <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-black/10 bg-white/70 p-4 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 ease-out dark:border-white/10 dark:bg-neutral-900/70 dark:shadow-black/50">
-          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/50 via-white/20 to-transparent opacity-90 dark:from-white/5 dark:via-white/[0.02] dark:to-transparent dark:opacity-100" />
+        <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-deepest)]/90 p-4 shadow-[0_20px_60px_-36px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-300 ease-out">
+          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--accent)]/5 via-transparent to-transparent opacity-90" />
           <div className="relative flex h-full flex-col gap-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-                  Resume a thread
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  {t('chatHistory.title')}
                 </h2>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Pick up where you left off or start fresh
-                </p>
+                <p className="text-sm text-[var(--text-muted)]">{t('chatHistory.subtitle')}</p>
               </div>
               <button
                 onClick={onClose}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/80 text-neutral-600 transition-colors duration-200 hover:border-black/15 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-neutral-400 dark:hover:border-white/20 dark:hover:bg-white/10 dark:hover:text-neutral-50"
-                aria-label="Close drawer"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-muted)] transition-colors duration-200 hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)] hover:text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
+                aria-label={t('chatHistory.closeDrawer')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -191,28 +188,27 @@ export default function ChatHistoryDrawer({
 
             <button
               onClick={handleNewChat}
-              className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-sm font-semibold text-neutral-900 transition-colors duration-200 hover:border-black/15 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-neutral-50 dark:hover:border-white/20 dark:hover:bg-white/10"
+              className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors duration-200 hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/[0.02] via-transparent to-transparent opacity-70 transition-opacity duration-200 group-hover:opacity-90 dark:from-white/5 dark:via-transparent dark:to-transparent" />
               <Plus className="relative h-4 w-4" />
-              <span className="relative">Start new chat</span>
+              <span className="relative">{t('chatHistory.newChat')}</span>
             </button>
 
             <div className="flex-1 overflow-y-auto">
               {isLoading ?
                 <div className="flex h-full items-center justify-center">
-                  <div className="text-sm text-neutral-500 dark:text-neutral-400">Loading...</div>
+                  <div className="text-sm text-[var(--text-muted)]">{t('chatHistory.loading')}</div>
                 </div>
               : conversations.length === 0 ?
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-4 py-6 text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-black/5 bg-white/80 text-neutral-400 shadow-sm shadow-black/5 dark:border-white/10 dark:bg-white/5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-muted)] shadow-sm shadow-black/10">
                     <MessageSquare className="h-5 w-5" />
                   </div>
-                  <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    No conversations yet
+                  <p className="text-sm font-medium text-[var(--text-secondary)]">
+                    {t('chatHistory.noConversations')}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Start a new chat to see it here
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t('chatHistory.noConversationsHint')}
                   </p>
                 </div>
               : <div className="space-y-2">
@@ -221,33 +217,42 @@ export default function ChatHistoryDrawer({
                     return (
                       <div
                         key={conversation.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => {
                           onLoadConversation(conversation.id);
                           onClose();
                         }}
-                        className={`group relative cursor-pointer rounded-lg border px-3 py-3 transition-colors duration-150 ${
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onLoadConversation(conversation.id);
+                            onClose();
+                          }
+                        }}
+                        className={`group relative cursor-pointer rounded-lg border px-3 py-3 transition-colors duration-150 focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none ${
                           isActive ?
-                            'border-black/10 bg-white/90 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.1)] dark:border-white/15 dark:bg-white/10 dark:shadow-none'
-                          : 'border-black/5 bg-white/60 hover:border-black/10 hover:bg-white/80 dark:border-white/5 dark:bg-white/5 dark:hover:border-white/10 dark:hover:bg-white/10'
+                            'border-[var(--accent)]/30 bg-[var(--bg-raised)] shadow-[0_4px_12px_-4px_rgba(139,92,246,0.15)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-surface)]/60 hover:border-[var(--border-medium)] hover:bg-[var(--bg-surface)]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                            <div className="truncate text-sm font-semibold text-[var(--text-primary)]">
                               {conversation.title}
                             </div>
-                            <p className="mt-1 line-clamp-2 text-xs text-neutral-600 dark:text-neutral-400">
+                            <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">
                               {conversationPreviews[conversation.id]}
                             </p>
-                            <div className="mt-2 flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-500">
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-disabled)]">
                               <Clock className="h-3 w-3" />
                               <span>{formatRelativeDate(conversation.updatedAt)}</span>
                             </div>
                           </div>
                           <button
                             onClick={(e) => handleDelete(e, conversation.id)}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-transparent text-neutral-400 opacity-0 transition-colors duration-150 group-hover:opacity-100 hover:border-black/10 hover:bg-black/5 hover:text-neutral-700 dark:hover:border-white/10 dark:hover:bg-white/5 dark:hover:text-neutral-200"
-                            aria-label="Delete conversation"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-transparent text-[var(--text-disabled)] opacity-0 transition-colors duration-150 group-hover:opacity-100 hover:border-[var(--border-subtle)] hover:bg-[var(--bg-elevated)] hover:text-[var(--error)] focus:opacity-100 focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
+                            aria-label={t('chatHistory.deleteConversation')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

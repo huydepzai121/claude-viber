@@ -2,14 +2,28 @@ import { useEffect, useRef, useState } from 'react';
 
 import ChatHistoryDrawer from '@/components/ChatHistoryDrawer';
 import ChatInput from '@/components/ChatInput';
+import FilePreviewPanel from '@/components/FilePreviewPanel';
+import Greeting from '@/components/Greeting';
 import MessageList from '@/components/MessageList';
-import TitleBar from '@/components/TitleBar';
+import QuestionDialog from '@/components/QuestionDialog';
+import SessionInfo from '@/components/SessionInfo';
+import Sidebar from '@/components/Sidebar';
+import SkillsPanel from '@/components/SkillsPanel';
+import TabNavigation from '@/components/TabNavigation';
+import { FilePreviewProvider } from '@/contexts/FilePreviewContext';
+import { UserQuestionProvider } from '@/contexts/UserQuestionContext';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useClaudeChat } from '@/hooks/useClaudeChat';
+import { useTranslation } from '@/i18n/context';
 import type { Message, MessageAttachment } from '@/types/chat';
 
 import { MAX_ATTACHMENT_BYTES } from '../../shared/constants';
-import type { ChatModelPreference, SerializedAttachmentPayload } from '../../shared/types/ipc';
+import type {
+  ChatModelPreference,
+  SerializedAttachmentPayload,
+  SessionInitData,
+  SlashCommand
+} from '../../shared/types/ipc';
 
 interface PendingAttachment {
   id: string;
@@ -20,7 +34,6 @@ interface PendingAttachment {
 }
 
 const MAX_ATTACHMENT_SIZE_MB = Math.floor(MAX_ATTACHMENT_BYTES / (1024 * 1024));
-const WORKSPACE_FALLBACK_LABEL = 'the configured claude-agent workspace directory';
 const IMAGE_FILE_EXTENSIONS = new Set([
   'png',
   'apng',
@@ -99,22 +112,131 @@ function serializeMessagesForStorage(messages: Message[]): PersistedMessage[] {
   }));
 }
 
-export default function Chat() {
+interface ChatProps {
+  onOpenSettings?: () => void;
+}
+
+// Bridge component that listens for AskUserQuestion IPC events and shows QuestionDialog
+function ChatQuestionDialog() {
+  const [questions, setQuestions] = useState<
+    {
+      id: string;
+      title: string;
+      options: { id: string; label: string }[];
+      allowMultiple?: boolean;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    const unsub = window.electron.chat.onAskUserQuestion((data) => {
+      const parsed = (
+        data.questions as {
+          question: string;
+          header: string;
+          options: { label: string }[];
+          multiSelect?: boolean;
+        }[]
+      ).map((q, i) => ({
+        id: `q-${i}`,
+        title: q.question,
+        options: q.options.map((o, j) => ({ id: `opt-${j}`, label: o.label })),
+        allowMultiple: q.multiSelect
+      }));
+      setQuestions(parsed);
+    });
+    return unsub;
+  }, []);
+
+  if (questions.length === 0) return null;
+
+  const handleSubmit = (answers: Record<string, string[]>) => {
+    window.electron.chat.answerUserQuestion(answers).catch(() => {});
+    setQuestions([]);
+  };
+
+  const handleSkip = () => {
+    window.electron.chat.answerUserQuestion({}).catch(() => {});
+    setQuestions([]);
+  };
+
+  const handleClose = () => {
+    window.electron.chat.answerUserQuestion({}).catch(() => {});
+    setQuestions([]);
+  };
+
+  return (
+    <QuestionDialog
+      questions={questions}
+      onSubmit={handleSubmit}
+      onSkip={handleSkip}
+      onClose={handleClose}
+    />
+  );
+}
+
+export default function Chat({ onOpenSettings }: ChatProps) {
   const [inputValue, setInputValue] = useState('');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const { t } = useTranslation();
   const [chatInputHeight, setChatInputHeight] = useState(0);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [workspaceDir, setWorkspaceDir] = useState<string | null>(null);
   const [modelPreference, setModelPreference] = useState<ChatModelPreference>('fast');
   const [isModelPreferenceUpdating, setIsModelPreferenceUpdating] = useState(false);
+  const [sessionInitData, setSessionInitData] = useState<SessionInitData | null>(null);
+  const [slashCommands, setSlashCommands] = useState<SlashCommand[]>([]);
+  const [currentModelId, setCurrentModelId] = useState<string>('claude-sonnet-4-6');
   const { messages, setMessages, isLoading, setIsLoading } = useClaudeChat();
   const messagesContainerRef = useAutoScroll(isLoading, messages);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
   const pendingAttachmentsRef = useRef<PendingAttachment[]>([]);
+
+  // Sidebar state
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSkillsPanelOpen, setIsSkillsPanelOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [userProfile, setUserProfile] = useState<{ name: string; plan: string }>({
+    name: 'User',
+    plan: 'Pro plan'
+  });
+  const [onboardingTasks, setOnboardingTasks] = useState([
+    {
+      id: 'see-work',
+      title:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ? 'See Claude work' : 'Xem Claude làm việc',
+      description:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ?
+          'Try a quick task — Claude does it, you watch'
+        : 'Thử một tác vụ nhanh — Claude làm, bạn xem',
+      completed: false
+    },
+    {
+      id: 'customize',
+      title:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ?
+          'Customize Claude to your role'
+        : 'Tùy chỉnh Claude theo vai trò',
+      description:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ?
+          'Add ready-made tools and workflows'
+        : 'Thêm công cụ và quy trình có sẵn',
+      completed: false
+    },
+    {
+      id: 'notifications',
+      title:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ? 'Turn on notifications' : 'Bật thông báo',
+      description:
+        t('sidebar.getToKnow') === 'Get to know Cowork' ?
+          'Claude can ping you when it finishes work or needs your input'
+        : 'Claude có thể thông báo khi hoàn thành hoặc cần bạn',
+      completed: false
+    }
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -128,8 +250,50 @@ export default function Chat() {
       .catch((error) => {
         console.error('Error loading workspace directory:', error);
       });
+
+    const unsubWorkspace = window.electron.config.onWorkspaceChanged(({ workspaceDir }) => {
+      if (isMounted) setWorkspaceDir(workspaceDir);
+    });
+
+    // Start session eagerly so slash commands and session info are available immediately
+    window.electron.chat.startSession().catch(() => {
+      // API key may not be configured yet — that's fine
+    });
+
+    // Load persisted sidebar, onboarding, and user profile state
+    window.electron.config
+      .getSidebarCollapsed()
+      .then(({ collapsed }) => {
+        if (isMounted) setIsSidebarCollapsed(collapsed);
+      })
+      .catch(() => {});
+
+    window.electron.config
+      .getOnboardingState()
+      .then(({ dismissed, completed }) => {
+        if (!isMounted) return;
+        if (dismissed) setShowOnboarding(false);
+        if (Object.keys(completed).length > 0) {
+          setOnboardingTasks((prev) =>
+            prev.map((task) => ({
+              ...task,
+              completed: completed[task.id] ?? task.completed
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    window.electron.config
+      .getUserProfile()
+      .then(({ profile }) => {
+        if (isMounted) setUserProfile(profile);
+      })
+      .catch(() => {});
+
     return () => {
       isMounted = false;
+      unsubWorkspace();
     };
   }, []);
 
@@ -172,10 +336,12 @@ export default function Chat() {
 
       for (const file of files) {
         if (file.size > MAX_ATTACHMENT_BYTES) {
-          const workspaceLabel = workspaceDir ?? WORKSPACE_FALLBACK_LABEL;
-          rejectionMessage =
-            `"${file.name}" is larger than ${MAX_ATTACHMENT_SIZE_MB} MB. ` +
-            `Please drop it directly into the Claude Agent workspace at ${workspaceLabel}.`;
+          const workspaceLabel = workspaceDir ?? t('attachments.workspaceFallback');
+          rejectionMessage = t('attachments.tooLarge', {
+            fileName: file.name,
+            maxMb: MAX_ATTACHMENT_SIZE_MB,
+            workspace: workspaceLabel
+          });
           continue;
         }
 
@@ -295,6 +461,20 @@ export default function Chat() {
     };
   }, []);
 
+  // Listen for SDK session init metadata, slash commands, and supported models
+  useEffect(() => {
+    const unsubInit = window.electron.chat.onSessionInit((data) => {
+      setSessionInitData(data);
+    });
+    const unsubCommands = window.electron.chat.onSlashCommands((commands) => {
+      setSlashCommands(commands);
+    });
+    return () => {
+      unsubInit();
+      unsubCommands();
+    };
+  }, []);
+
   const handleNewChat = async () => {
     if (isLoading) return;
 
@@ -325,7 +505,15 @@ export default function Chat() {
       // Clear current conversation ID and session
       setCurrentConversationId(null);
       setCurrentSessionId(null);
+      // Clear old session data so UI doesn't show stale commands/skills
+      setSessionInitData(null);
+      setSlashCommands([]);
       isInitialLoadRef.current = true;
+
+      // Start new session immediately so commands/skills are available right away
+      window.electron.chat.startSession().catch(() => {
+        // API key may not be configured yet — that's fine
+      });
     } catch (error) {
       console.error('Error starting new chat:', error);
     }
@@ -368,7 +556,15 @@ export default function Chat() {
         setMessages(parsedMessages);
         setCurrentConversationId(conversationId);
         setCurrentSessionId(response.conversation.sessionId ?? null);
+        // Clear old session data so UI doesn't show stale commands/skills
+        setSessionInitData(null);
+        setSlashCommands([]);
         isInitialLoadRef.current = true;
+
+        // Start session (resumed or new) so commands/skills are available right away
+        window.electron.chat.startSession().catch(() => {
+          // API key may not be configured yet — that's fine
+        });
       }
     } catch (error) {
       console.error('Error loading conversation:', error);
@@ -499,11 +695,6 @@ export default function Chat() {
 
   const messageListBottomPadding = chatInputHeight > 0 ? chatInputHeight + 48 : 160;
 
-  const handleNewChatFromTitleBar = async () => {
-    await handleNewChat();
-    setIsHistoryOpen(false);
-  };
-
   const handleModelPreferenceChange = async (preference: ChatModelPreference) => {
     if (preference === modelPreference) {
       return;
@@ -529,48 +720,122 @@ export default function Chat() {
     }
   };
 
+  const handleToggleOnboardingTask = (taskId: string) => {
+    setOnboardingTasks((prev) =>
+      prev.map((task) => {
+        if (task.id !== taskId) return task;
+        const newCompleted = !task.completed;
+        window.electron.config.setOnboardingTaskCompleted(taskId, newCompleted).catch(() => {});
+        return { ...task, completed: newCompleted };
+      })
+    );
+  };
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
+    window.electron.config.setOnboardingDismissed(true).catch(() => {});
+  };
+
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      window.electron.config.setSidebarCollapsed(next).catch(() => {});
+      return next;
+    });
+  };
+
   return (
-    <div className="flex h-screen flex-col bg-white dark:bg-neutral-900">
-      <TitleBar
-        onOpenHistory={() => setIsHistoryOpen((prev) => !prev)}
-        onNewChat={handleNewChatFromTitleBar}
-      />
+    <UserQuestionProvider>
+      <FilePreviewProvider>
+        <ChatQuestionDialog />
+        <div className="flex h-screen bg-[var(--bg-primary)]">
+          {/* Sidebar */}
+          <Sidebar
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
+            onNewTask={handleNewChat}
+            onOpenSearch={() => setIsHistoryOpen(true)}
+            onOpenIdeas={() => setIsSkillsPanelOpen(true)}
+            onOpenSettings={onOpenSettings}
+            recentSessions={[]}
+            onboardingTasks={onboardingTasks}
+            onToggleOnboardingTask={handleToggleOnboardingTask}
+            onDismissOnboarding={handleDismissOnboarding}
+            showOnboarding={showOnboarding}
+            userProfile={userProfile}
+          />
 
-      {/* Messages container with padding at bottom for floating input */}
-      <div className="flex flex-1 flex-col overflow-hidden pt-12">
-        <MessageList
-          messages={messages}
-          isLoading={isLoading}
-          containerRef={messagesContainerRef}
-          bottomPadding={messageListBottomPadding}
-        />
+          {/* Main content area */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            {/* Top bar with tabs */}
+            <div className="flex h-12 items-center justify-center border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] [-webkit-app-region:drag]">
+              <TabNavigation />
+            </div>
 
-        <ChatInput
-          value={inputValue}
-          onChange={setInputValue}
-          onSend={handleSendMessage}
-          isLoading={isLoading}
-          onStopStreaming={handleStopStreaming}
-          autoFocus
-          onHeightChange={setChatInputHeight}
-          attachments={pendingAttachments}
-          onFilesSelected={handleFilesSelected}
-          onRemoveAttachment={handleRemoveAttachment}
-          canSend={Boolean(inputValue.trim()) || pendingAttachments.length > 0}
-          attachmentError={attachmentError}
-          modelPreference={modelPreference}
-          onModelPreferenceChange={handleModelPreferenceChange}
-          isModelPreferenceUpdating={isModelPreferenceUpdating}
-        />
-      </div>
+            {/* Content area */}
+            <div className="relative flex flex-1 flex-col overflow-hidden">
+              {messages.length === 0 ?
+                /* Empty state with greeting */
+                <div className="flex flex-1 flex-col items-center justify-center">
+                  <Greeting />
+                </div>
+              : /* Messages */
+                <MessageList
+                  messages={messages}
+                  isLoading={isLoading}
+                  containerRef={messagesContainerRef}
+                  bottomPadding={messageListBottomPadding}
+                />
+              }
 
-      <ChatHistoryDrawer
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onLoadConversation={handleLoadConversation}
-        currentConversationId={currentConversationId}
-        onNewChat={handleNewChat}
-      />
-    </div>
+              <SessionInfo sessionInitData={sessionInitData} />
+
+              <ChatInput
+                value={inputValue}
+                onChange={setInputValue}
+                onSend={handleSendMessage}
+                isLoading={isLoading}
+                onStopStreaming={handleStopStreaming}
+                autoFocus
+                onHeightChange={setChatInputHeight}
+                attachments={pendingAttachments}
+                onFilesSelected={handleFilesSelected}
+                onRemoveAttachment={handleRemoveAttachment}
+                canSend={Boolean(inputValue.trim()) || pendingAttachments.length > 0}
+                attachmentError={attachmentError}
+                modelPreference={modelPreference}
+                onModelPreferenceChange={handleModelPreferenceChange}
+                isModelPreferenceUpdating={isModelPreferenceUpdating}
+                currentModelId={currentModelId}
+                onModelChange={(modelId: string) => {
+                  setCurrentModelId(modelId);
+                  window.electron.chat.setModelDirect(modelId).catch((err) => {
+                    console.error('Failed to set model:', err);
+                  });
+                }}
+                slashCommands={slashCommands}
+                sessionInitData={sessionInitData}
+              />
+            </div>
+          </div>
+
+          <ChatHistoryDrawer
+            isOpen={isHistoryOpen}
+            onClose={() => setIsHistoryOpen(false)}
+            onLoadConversation={handleLoadConversation}
+            currentConversationId={currentConversationId}
+            onNewChat={handleNewChat}
+          />
+
+          <FilePreviewPanel />
+
+          <SkillsPanel
+            isOpen={isSkillsPanelOpen}
+            onClose={() => setIsSkillsPanelOpen(false)}
+            loadedSkills={sessionInitData?.skills}
+          />
+        </div>
+      </FilePreviewProvider>
+    </UserQuestionProvider>
   );
 }

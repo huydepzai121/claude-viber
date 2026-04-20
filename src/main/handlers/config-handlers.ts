@@ -1,18 +1,30 @@
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
-import { release, type, version } from 'os';
-import { app, ipcMain } from 'electron';
+import { homedir, release, type, version } from 'os';
+import { join } from 'path';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 
 import {
+  addRecentFolder,
   buildClaudeSessionEnv,
   buildEnhancedPath,
   ensureWorkspaceDir,
+  getApiBaseUrl,
   getApiKeyStatus,
   getDebugMode,
+  getOnboardingState,
+  getRecentFolders,
+  getSidebarCollapsed,
+  getUserProfile,
   getWorkspaceDir,
   loadConfig,
   saveConfig,
-  setApiKey
+  setApiBaseUrl,
+  setApiKey,
+  setOnboardingDismissed,
+  setOnboardingTaskCompleted,
+  setSidebarCollapsed,
+  setUserProfile
 } from '../lib/config';
 
 const requireModule = createRequire(import.meta.url);
@@ -41,7 +53,7 @@ function getClaudeAgentSdkVersion(): string {
   return 'unknown';
 }
 
-export function registerConfigHandlers(): void {
+export function registerConfigHandlers(getMainWindow: () => BrowserWindow | null): void {
   // Get workspace directory
   ipcMain.handle('config:get-workspace-dir', () => {
     return { workspaceDir: getWorkspaceDir() };
@@ -60,6 +72,12 @@ export function registerConfigHandlers(): void {
 
     // Create the new workspace directory
     await ensureWorkspaceDir();
+
+    // Broadcast to renderer so all pages stay in sync
+    const mainWindow = getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('config:workspace-changed', { workspaceDir: trimmedPath });
+    }
 
     return { success: true };
   });
@@ -87,6 +105,18 @@ export function registerConfigHandlers(): void {
     const normalized = apiKey?.trim() || null;
     setApiKey(normalized);
     return { success: true, status: getApiKeyStatus() };
+  });
+
+  // Get API base URL
+  ipcMain.handle('config:get-api-base-url', () => {
+    return { apiBaseUrl: getApiBaseUrl() };
+  });
+
+  // Set or clear API base URL
+  ipcMain.handle('config:set-api-base-url', (_event, apiBaseUrl?: string | null) => {
+    const normalized = apiBaseUrl?.trim() || null;
+    setApiBaseUrl(normalized);
+    return { success: true };
   });
 
   // Get PATH environment variable info (for debug/dev section)
@@ -128,10 +158,9 @@ export function registerConfigHandlers(): void {
 
       // Mask sensitive values
       if (value.length <= 8) {
-        return '••••';
+        return '****';
       }
-      // Show first 4 and last 4 chars for longer values
-      return `${value.slice(0, 4)}••••${value.slice(-4)}`;
+      return '****';
     };
 
     // Use the same environment builder as Claude Agent SDK to ensure consistency
@@ -168,5 +197,216 @@ export function registerConfigHandlers(): void {
       osType: type(),
       osVersion: version()
     };
+  });
+
+  // MCP Server Management — read/write ~/.claude/settings.json
+  const claudeSettingsPath = join(homedir(), '.claude', 'settings.json');
+
+  function readClaudeSettings(): Record<string, unknown> {
+    try {
+      if (existsSync(claudeSettingsPath)) {
+        return JSON.parse(readFileSync(claudeSettingsPath, 'utf-8'));
+      }
+    } catch {
+      // ignore
+    }
+    return {};
+  }
+
+  function writeClaudeSettings(settings: Record<string, unknown>): void {
+    writeFileSync(claudeSettingsPath, JSON.stringify(settings, null, 2));
+  }
+
+  ipcMain.handle('config:get-mcp-servers', () => {
+    const settings = readClaudeSettings();
+    const mcpServers = (settings.mcpServers ?? {}) as Record<string, unknown>;
+    return { mcpServers };
+  });
+
+  ipcMain.handle('config:set-mcp-servers', (_event, mcpServers: Record<string, unknown>) => {
+    const settings = readClaudeSettings();
+    settings.mcpServers = mcpServers;
+    writeClaudeSettings(settings);
+    return { success: true };
+  });
+
+  // Read slash commands and skills from ~/.claude/ directory
+  ipcMain.handle('config:get-claude-commands', () => {
+    const claudeDir = join(homedir(), '.claude');
+    const commands: { name: string; description: string; argumentHint: string }[] = [];
+
+    // Read commands from ~/.claude/commands/
+    const commandsDir = join(claudeDir, 'commands');
+    if (existsSync(commandsDir)) {
+      try {
+        const entries = readdirSync(commandsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isFile() && entry.name.endsWith('.md')) {
+            const name = entry.name.replace(/\.md$/, '');
+            commands.push({ name: `/${name}`, description: '', argumentHint: '' });
+          } else if (entry.isDirectory()) {
+            // Sub-commands: ~/.claude/commands/ckm/*.md → /ckm:subname
+            const subDir = join(commandsDir, entry.name);
+            try {
+              const subEntries = readdirSync(subDir, { withFileTypes: true });
+              for (const subEntry of subEntries) {
+                if (subEntry.isFile() && subEntry.name.endsWith('.md')) {
+                  const subName = subEntry.name.replace(/\.md$/, '');
+                  commands.push({
+                    name: `/${entry.name}:${subName}`,
+                    description: '',
+                    argumentHint: ''
+                  });
+                }
+              }
+            } catch {
+              // skip unreadable subdirectories
+            }
+          }
+        }
+      } catch {
+        // ignore read errors
+      }
+    }
+
+    // Read skills from ~/.claude/skills/ (directory names)
+    const skillsDir = join(claudeDir, 'skills');
+    if (existsSync(skillsDir)) {
+      try {
+        const entries = readdirSync(skillsDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isDirectory() && !entry.name.startsWith('.')) {
+            // Skills are available as slash commands too
+            const skillName = entry.name;
+            // Don't add if already in commands list
+            if (!commands.some((c) => c.name === `/${skillName}`)) {
+              commands.push({ name: `/${skillName}`, description: 'Skill', argumentHint: '' });
+            }
+          }
+        }
+      } catch {
+        // ignore read errors
+      }
+    }
+
+    // Sort alphabetically
+    commands.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { commands };
+  });
+
+  // Native folder picker dialog
+  ipcMain.handle('config:browse-folder', async () => {
+    try {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      const allWindows = BrowserWindow.getAllWindows();
+      const parentWindow = focusedWindow ?? (allWindows.length > 0 ? allWindows[0] : null);
+      const result = await dialog.showOpenDialog(parentWindow as BrowserWindow, {
+        properties: ['openDirectory'],
+        title: 'Select workspace folder'
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true, folder: null };
+      }
+      return { canceled: false, folder: result.filePaths[0] };
+    } catch (error) {
+      console.error('Failed to open folder picker:', error);
+      return { canceled: true, folder: null };
+    }
+  });
+
+  // Recent folders
+  ipcMain.handle('config:get-recent-folders', () => {
+    return { folders: getRecentFolders() };
+  });
+
+  ipcMain.handle('config:add-recent-folder', (_event, folder: string) => {
+    addRecentFolder(folder);
+    return { success: true };
+  });
+
+  // User profile
+  ipcMain.handle('config:get-user-profile', () => {
+    return { profile: getUserProfile() };
+  });
+
+  ipcMain.handle('config:set-user-profile', (_event, profile: { name: string; plan: string }) => {
+    setUserProfile(profile);
+    return { success: true };
+  });
+
+  // Onboarding state
+  ipcMain.handle('config:get-onboarding-state', () => {
+    return getOnboardingState();
+  });
+
+  ipcMain.handle('config:set-onboarding-dismissed', (_event, dismissed: boolean) => {
+    setOnboardingDismissed(dismissed);
+    return { success: true };
+  });
+
+  ipcMain.handle(
+    'config:set-onboarding-task-completed',
+    (_event, taskId: string, completed: boolean) => {
+      setOnboardingTaskCompleted(taskId, completed);
+      return { success: true };
+    }
+  );
+
+  // Sidebar state
+  ipcMain.handle('config:get-sidebar-collapsed', () => {
+    return { collapsed: getSidebarCollapsed() };
+  });
+
+  ipcMain.handle('config:set-sidebar-collapsed', (_event, collapsed: boolean) => {
+    setSidebarCollapsed(collapsed);
+    return { success: true };
+  });
+
+  // Skill discovery — read SKILL.md frontmatter from workspace skills
+  ipcMain.handle('config:get-skills', () => {
+    const skillsDir = join(getWorkspaceDir(), '.claude', 'skills');
+    const skills: { name: string; description: string; path: string }[] = [];
+
+    if (!existsSync(skillsDir)) {
+      return { skills };
+    }
+
+    try {
+      const entries = readdirSync(skillsDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
+
+        const skillPath = join(skillsDir, entry.name);
+        const skillMdPath = join(skillPath, 'SKILL.md');
+
+        let name = entry.name;
+        let description = '';
+
+        if (existsSync(skillMdPath)) {
+          try {
+            const content = readFileSync(skillMdPath, 'utf-8');
+            // Parse YAML frontmatter between --- delimiters
+            const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+            if (match) {
+              const frontmatter = match[1];
+              const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+              const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+              if (nameMatch) name = nameMatch[1].trim();
+              if (descMatch) description = descMatch[1].trim();
+            }
+          } catch {
+            // skip unreadable SKILL.md
+          }
+        }
+
+        skills.push({ name, description, path: skillPath });
+      }
+    } catch {
+      // ignore read errors
+    }
+
+    skills.sort((a, b) => a.name.localeCompare(b.name));
+    return { skills };
   });
 }

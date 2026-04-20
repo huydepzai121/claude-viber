@@ -179,9 +179,9 @@ export default function BlockGroup({
                     />
                     {block.thinking && (
                       <div
-                        className={`thinking-expanded-content mt-1.5 ml-3 border-l ${borderColor} pl-3 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400`}
+                        className={`thinking-expanded-content mt-1.5 ml-3 border-l ${borderColor} pl-3 text-sm leading-relaxed text-[var(--text-muted)]`}
                       >
-                        <div className="prose prose-sm max-w-none prose-neutral dark:prose-invert">
+                        <div className="prose prose-sm max-w-none prose-invert">
                           <Markdown>{block.thinking}</Markdown>
                         </div>
                       </div>

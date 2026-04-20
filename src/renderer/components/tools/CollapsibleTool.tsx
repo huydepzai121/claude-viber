@@ -25,13 +25,13 @@ export function CollapsibleTool({
         aria-expanded={isExpanded}
         className={`flex w-full items-center gap-1.5 text-left transition-colors ${
           hasExpandedContent ?
-            'cursor-pointer text-neutral-500 hover:text-neutral-600 dark:text-neutral-400 dark:hover:text-neutral-300'
-          : 'cursor-default text-neutral-400 dark:text-neutral-500'
+            'cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          : 'cursor-default text-[var(--text-disabled)]'
         }`}
       >
         <div className="flex-1">{collapsedContent}</div>
         {hasExpandedContent && (
-          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-neutral-400 transition-colors dark:text-neutral-500">
+          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-[var(--text-disabled)] transition-colors">
             {isExpanded ?
               <ChevronUp className="size-3" />
             : <ChevronDown className="size-3" />}
@@ -39,7 +39,7 @@ export function CollapsibleTool({
         )}
       </button>
       {isExpanded && hasExpandedContent && (
-        <div className="collapsible-tool-expanded mt-1 ml-3 border-l border-neutral-200/30 pl-2.5 dark:border-neutral-700/30">
+        <div className="collapsible-tool-expanded mt-1 ml-3 border-l border-[var(--border-subtle)] pl-2.5">
           <div className="space-y-1.5">{expandedContent}</div>
         </div>
       )}

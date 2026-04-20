@@ -5,6 +5,7 @@ import { app, BrowserWindow, Menu } from 'electron';
 import { registerChatHandlers } from './handlers/chat-handlers';
 import { registerConfigHandlers } from './handlers/config-handlers';
 import { registerConversationHandlers } from './handlers/conversation-handlers';
+import { registerFileHandlers } from './handlers/file-handlers';
 import { registerShellHandlers } from './handlers/shell-handlers';
 import { registerUpdateHandlers } from './handlers/update-handlers';
 import { buildEnhancedPath, ensureWorkspaceDir } from './lib/config';
@@ -56,6 +57,8 @@ function createWindow() {
   // electron-vite provides ELECTRON_RENDERER_URL in dev mode
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    // Auto-open DevTools in dev mode
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
@@ -97,7 +100,8 @@ app.whenReady().then(async () => {
   });
 
   // Register all IPC handlers
-  registerConfigHandlers();
+  registerConfigHandlers(() => mainWindow);
+  registerFileHandlers();
   registerChatHandlers(() => mainWindow);
   registerConversationHandlers();
   registerShellHandlers();

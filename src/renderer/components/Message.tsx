@@ -27,9 +27,9 @@ export default function Message({ message, isLoading = false }: MessageProps) {
 
     return (
       <div className="flex justify-end px-1">
-        <article className="relative max-w-[min(34rem,calc(100%-2rem))] rounded-2xl border border-neutral-200/70 bg-white px-3 py-2 text-base leading-relaxed text-neutral-900 shadow-sm shadow-black/5 dark:border-neutral-800/60 dark:bg-neutral-900/70 dark:text-neutral-50 dark:shadow-black/30">
+        <article className="relative max-w-[min(34rem,calc(100%-2rem))] rounded-2xl border border-[var(--border-medium)] bg-[var(--bg-raised)] px-3 py-2 text-base leading-relaxed text-[var(--text-primary)] shadow-sm shadow-black/20">
           {hasText && (
-            <div className="prose prose-base max-w-none prose-neutral dark:prose-invert">
+            <div className="prose prose-base max-w-none prose-invert">
               <Markdown>{userContent}</Markdown>
             </div>
           )}
@@ -48,7 +48,7 @@ export default function Message({ message, isLoading = false }: MessageProps) {
     return (
       <div className="flex justify-start">
         <article className="w-full px-3 py-2">
-          <div className="prose prose-base max-w-none text-base leading-relaxed prose-neutral dark:prose-invert">
+          <div className="prose prose-base max-w-none text-base leading-relaxed prose-invert">
             <Markdown>{message.content}</Markdown>
           </div>
         </article>
@@ -62,34 +62,27 @@ export default function Message({ message, isLoading = false }: MessageProps) {
 
   for (const block of message.content) {
     if (block.type === 'text') {
-      // If we have a group, add it before the text block
       if (currentGroup.length > 0) {
         groupedBlocks.push([...currentGroup]);
         currentGroup = [];
       }
       groupedBlocks.push(block);
     } else if (block.type === 'thinking' || block.type === 'tool_use') {
-      // Add to current group
       currentGroup.push(block);
     }
   }
 
-  // Add any remaining group
   if (currentGroup.length > 0) {
     groupedBlocks.push(currentGroup);
   }
 
-  // Determine which BlockGroup is the latest active section
-  // Find the last BlockGroup index
   const lastBlockGroupIndex = groupedBlocks.findLastIndex((item) => Array.isArray(item));
 
-  // Check if there are any incomplete blocks (still streaming)
   const hasIncompleteBlocks = message.content.some((block) => {
     if (block.type === 'thinking') {
       return !block.isComplete;
     }
     if (block.type === 'tool_use') {
-      // Tool is incomplete if it doesn't have a result yet
       return !block.tool?.result;
     }
     return false;
@@ -102,13 +95,12 @@ export default function Message({ message, isLoading = false }: MessageProps) {
       <article className="w-full px-3 py-2">
         <div className="space-y-3">
           {groupedBlocks.map((item, index) => {
-            // Single text block
             if (!Array.isArray(item)) {
               if (item.type === 'text' && item.text) {
                 return (
                   <div
                     key={index}
-                    className="prose prose-base max-w-none text-base leading-relaxed prose-neutral dark:prose-invert"
+                    className="prose prose-base max-w-none text-base leading-relaxed prose-invert"
                   >
                     <Markdown>{item.text}</Markdown>
                   </div>
@@ -117,7 +109,6 @@ export default function Message({ message, isLoading = false }: MessageProps) {
               return null;
             }
 
-            // Group of thinking/tool blocks
             const isLatestActiveSection = index === lastBlockGroupIndex;
             const hasTextAfter =
               index < groupedBlocks.length - 1 &&

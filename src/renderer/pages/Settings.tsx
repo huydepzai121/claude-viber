@@ -1,8 +1,13 @@
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Folder, FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+import McpManager from '@/components/McpManager';
+import { useTranslation } from '@/i18n/context';
+import type { Language } from '@/i18n/context';
 
 interface SettingsProps {
   onBack: () => void;
+  sessionMcpServers?: { name: string; status: string }[];
 }
 
 type ApiKeyStatus = {
@@ -11,7 +16,8 @@ type ApiKeyStatus = {
   lastFour: string | null;
 };
 
-function Settings({ onBack }: SettingsProps) {
+function Settings({ onBack, sessionMcpServers }: SettingsProps) {
+  const { t, language, setLanguage } = useTranslation();
   const [workspaceDir, setWorkspaceDir] = useState('');
   const [currentWorkspaceDir, setCurrentWorkspaceDir] = useState('');
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
@@ -58,8 +64,14 @@ function Settings({ onBack }: SettingsProps) {
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [apiKeySaveState, setApiKeySaveState] = useState<'idle' | 'success' | 'error'>('idle');
 
+  const [apiBaseUrl, setApiBaseUrl] = useState('');
+  const [currentApiBaseUrl, setCurrentApiBaseUrl] = useState<string | null>(null);
+  const [isSavingApiBaseUrl, setIsSavingApiBaseUrl] = useState(false);
+  const [apiBaseUrlSaveState, setApiBaseUrlSaveState] = useState<'idle' | 'success' | 'error'>(
+    'idle'
+  );
+
   useEffect(() => {
-    // Load current workspace directory
     window.electron.config
       .getWorkspaceDir()
       .then((response) => {
@@ -70,7 +82,10 @@ function Settings({ onBack }: SettingsProps) {
         setIsLoadingWorkspace(false);
       });
 
-    // Load current debug mode
+    const unsubWorkspace = window.electron.config.onWorkspaceChanged(({ workspaceDir }) => {
+      setCurrentWorkspaceDir(workspaceDir);
+    });
+
     window.electron.config
       .getDebugMode()
       .then((response) => {
@@ -81,15 +96,27 @@ function Settings({ onBack }: SettingsProps) {
         setIsLoadingDebugMode(false);
       });
 
-    // Load API key status
     window.electron.config
       .getApiKeyStatus()
       .then((response) => {
         setApiKeyStatus(response.status);
       })
       .catch(() => {
-        // ignore - will show as not configured
+        // ignore
       });
+
+    window.electron.config
+      .getApiBaseUrl()
+      .then((response) => {
+        setCurrentApiBaseUrl(response.apiBaseUrl);
+      })
+      .catch(() => {
+        // ignore
+      });
+
+    return () => {
+      unsubWorkspace();
+    };
   }, []);
 
   const loadPathInfo = async () => {
@@ -129,7 +156,6 @@ function Settings({ onBack }: SettingsProps) {
   };
 
   useEffect(() => {
-    // Load path info, env vars, and diagnostic metadata when debug section is expanded
     if (isDebugExpanded) {
       if (!pathInfo) {
         loadPathInfo();
@@ -144,7 +170,6 @@ function Settings({ onBack }: SettingsProps) {
   }, [isDebugExpanded, pathInfo, envVars, diagnosticMetadata]);
 
   useEffect(() => {
-    // Handle Escape key to go back to main view
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onBack();
@@ -162,11 +187,12 @@ function Settings({ onBack }: SettingsProps) {
     setWorkspaceSaveStatus('idle');
 
     try {
-      const response = await window.electron.config.setWorkspaceDir(workspaceDir);
+      const response = await window.electron.config.setWorkspaceDir(
+        workspaceDir || currentWorkspaceDir
+      );
       if (response.success) {
         setWorkspaceSaveStatus('success');
         setWorkspaceDir('');
-        // Reload workspace directory
         const workspaceResponse = await window.electron.config.getWorkspaceDir();
         setCurrentWorkspaceDir(workspaceResponse.workspaceDir);
         setTimeout(() => setWorkspaceSaveStatus('idle'), 2000);
@@ -191,7 +217,6 @@ function Settings({ onBack }: SettingsProps) {
       await window.electron.config.setDebugMode(newValue);
       setDebugMode(newValue);
     } catch (_error) {
-      // Revert on error
       setDebugMode(previousValue);
     } finally {
       setIsSavingDebugMode(false);
@@ -233,11 +258,51 @@ function Settings({ onBack }: SettingsProps) {
     }
   };
 
+  const handleSaveApiBaseUrl = async () => {
+    setIsSavingApiBaseUrl(true);
+    setApiBaseUrlSaveState('idle');
+
+    try {
+      await window.electron.config.setApiBaseUrl(apiBaseUrl);
+      setCurrentApiBaseUrl(apiBaseUrl.trim() || null);
+      setApiBaseUrl('');
+      setApiBaseUrlSaveState('success');
+      setTimeout(() => setApiBaseUrlSaveState('idle'), 2000);
+    } catch (_error) {
+      setApiBaseUrlSaveState('error');
+      setTimeout(() => setApiBaseUrlSaveState('idle'), 2500);
+    } finally {
+      setIsSavingApiBaseUrl(false);
+    }
+  };
+
+  const handleClearApiBaseUrl = async () => {
+    setIsSavingApiBaseUrl(true);
+    setApiBaseUrlSaveState('idle');
+    try {
+      await window.electron.config.setApiBaseUrl(null);
+      setCurrentApiBaseUrl(null);
+      setApiBaseUrl('');
+      setApiBaseUrlSaveState('success');
+      setTimeout(() => setApiBaseUrlSaveState('idle'), 2000);
+    } catch (_error) {
+      setApiBaseUrlSaveState('error');
+      setTimeout(() => setApiBaseUrlSaveState('idle'), 2500);
+    } finally {
+      setIsSavingApiBaseUrl(false);
+    }
+  };
+
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang);
+  };
+
   const isFormLoading = isLoadingWorkspace || isLoadingDebugMode;
-  const apiKeyPlaceholder = apiKeyStatus.lastFour ? `...${apiKeyStatus.lastFour}` : 'sk-ant-...';
+  const apiKeyPlaceholder =
+    apiKeyStatus.lastFour ? '****' : t('settings.apiKey.placeholder');
 
   return (
-    <div className="flex h-screen flex-col bg-linear-to-b from-neutral-50 via-white to-neutral-100 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
+    <div className="flex h-screen flex-col bg-[var(--bg-primary)]">
       <div className="fixed top-0 right-0 left-0 z-50 h-12 [-webkit-app-region:drag]" />
 
       <div className="flex flex-1 flex-col overflow-hidden pt-12">
@@ -245,63 +310,60 @@ function Settings({ onBack }: SettingsProps) {
           <div className="mx-auto max-w-3xl space-y-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-semibold text-neutral-900 dark:text-neutral-50">
-                  Settings
+                <h1 className="text-3xl font-semibold text-[var(--text-primary)]">
+                  {t('settings.title')}
                 </h1>
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Configure API access and workspace directory for Claude Agent Desktop.
-                </p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">{t('settings.subtitle')}</p>
               </div>
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-neutral-700 transition-colors [-webkit-app-region:no-drag] hover:border-neutral-300 hover:text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-neutral-100 dark:hover:border-neutral-600 dark:hover:text-neutral-50"
+                className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors [-webkit-app-region:no-drag] hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back
+                {t('settings.back')}
               </button>
             </div>
 
-            <div className="rounded-3xl border border-neutral-200/80 bg-white/95 p-6 shadow-2xl shadow-neutral-200/60 [-webkit-app-region:no-drag] dark:border-neutral-800 dark:bg-neutral-900/70 dark:shadow-black/40">
+            <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-2xl shadow-black/30 [-webkit-app-region:no-drag]">
               {isFormLoading ?
-                <div className="flex items-center justify-center py-12 text-sm text-neutral-500 dark:text-neutral-400">
-                  Loading settings...
+                <div className="flex items-center justify-center py-12 text-sm text-[var(--text-muted)]">
+                  {t('settings.loading')}
                 </div>
               : <div className="space-y-8">
                   {/* Anthropic API Key */}
                   <section className="space-y-4">
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-                        Anthropic API Key
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.apiKey.title')}
                       </h2>
-                      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                        Set an API key locally or use the <code>ANTHROPIC_API_KEY</code> environment
-                        variable.
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.apiKey.description')}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-neutral-600 dark:text-neutral-400">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-secondary)]">
                       <div className="flex items-center gap-2">
                         <span
                           className={`font-semibold ${
                             apiKeyStatus.configured ?
-                              'text-neutral-800 dark:text-neutral-100'
-                            : 'text-neutral-500 dark:text-neutral-500'
+                              'text-[var(--text-primary)]'
+                            : 'text-[var(--text-disabled)]'
                           }`}
                         >
                           {apiKeyStatus.configured ?
                             apiKeyStatus.source === 'env' ?
-                              'Using environment key'
-                            : 'Stored locally'
-                          : 'No key configured'}
+                              t('settings.apiKey.usingEnvKey')
+                            : t('settings.apiKey.storedLocally')
+                          : t('settings.apiKey.noKeyConfigured')}
                         </span>
                         {apiKeyStatus.lastFour && apiKeyStatus.configured && (
-                          <span className="font-mono text-xs text-neutral-500 dark:text-neutral-500">
-                            ...{apiKeyStatus.lastFour}
+                          <span className="font-mono text-xs text-[var(--text-disabled)]">
+                            ****
                           </span>
                         )}
                       </div>
                       {apiKeyStatus.source === 'env' && (
-                        <span className="rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold tracking-wide text-white uppercase dark:bg-neutral-50 dark:text-neutral-900">
-                          Env override
+                        <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-[11px] font-semibold tracking-wide text-white uppercase">
+                          {t('settings.apiKey.envOverride')}
                         </span>
                       )}
                     </div>
@@ -312,107 +374,257 @@ function Settings({ onBack }: SettingsProps) {
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
                         placeholder={apiKeyPlaceholder}
-                        className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 font-mono text-sm text-neutral-900 placeholder-neutral-400 transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-neutral-300"
+                        aria-label={t('settings.apiKey.title')}
+                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 font-mono text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
                       />
                       <div className="flex flex-wrap items-center justify-end gap-3 text-right">
                         {apiKeyStatus.source === 'local' && (
                           <button
                             onClick={handleClearStoredApiKey}
                             disabled={isSavingApiKey}
-                            className="rounded-full border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-500/70 dark:text-red-200 dark:hover:border-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-50"
+                            className="rounded-full border border-[var(--error)]/40 px-5 py-2 text-sm font-semibold text-[var(--error)] transition-colors hover:border-[var(--error)]/60 hover:bg-[var(--error)]/10 focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            Clear stored key
+                            {t('settings.apiKey.clearStoredKey')}
                           </button>
                         )}
                         <button
                           onClick={handleSaveApiKey}
                           disabled={!apiKeyInput.trim() || isSavingApiKey}
-                          className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
+                          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-hover)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {isSavingApiKey ? 'Saving...' : 'Save API Key'}
+                          {isSavingApiKey ? t('settings.apiKey.saving') : t('settings.apiKey.save')}
                         </button>
                         {apiKeySaveState === 'success' && (
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                            API key saved
+                          <span className="text-xs font-medium text-[var(--success)]">
+                            {t('settings.apiKey.saved')}
                           </span>
                         )}
                         {apiKeySaveState === 'error' && (
-                          <span className="text-xs font-medium text-red-600 dark:text-red-400">
-                            Failed to save key
+                          <span className="text-xs font-medium text-[var(--error)]">
+                            {t('settings.apiKey.saveFailed')}
                           </span>
                         )}
                       </div>
                     </div>
                   </section>
 
-                  <div className="border-t border-neutral-200/80 dark:border-neutral-800" />
+                  <div className="border-t border-[var(--border-subtle)]" />
+
+                  {/* API Base URL */}
+                  <section className="space-y-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.apiBaseUrl.title')}
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.apiBaseUrl.description')}
+                      </p>
+                    </div>
+                    {currentApiBaseUrl && (
+                      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 font-mono text-sm text-[var(--text-secondary)]">
+                        ****
+                      </div>
+                    )}
+                    <div className="space-y-3">
+                      <input
+                        id="api-base-url-input"
+                        type="password"
+                        value={apiBaseUrl}
+                        onChange={(e) => setApiBaseUrl(e.target.value)}
+                        placeholder={t('settings.apiBaseUrl.placeholder')}
+                        aria-label={t('settings.apiBaseUrl.title')}
+                        className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 font-mono text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
+                      />
+                      <div className="flex flex-wrap items-center justify-end gap-3 text-right">
+                        {currentApiBaseUrl && (
+                          <button
+                            onClick={handleClearApiBaseUrl}
+                            disabled={isSavingApiBaseUrl}
+                            className="rounded-full border border-[var(--error)]/40 px-5 py-2 text-sm font-semibold text-[var(--error)] transition-colors hover:border-[var(--error)]/60 hover:bg-[var(--error)]/10 focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {t('settings.apiBaseUrl.clear')}
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSaveApiBaseUrl}
+                          disabled={!apiBaseUrl.trim() || isSavingApiBaseUrl}
+                          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-hover)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isSavingApiBaseUrl ?
+                            t('settings.apiBaseUrl.saving')
+                          : t('settings.apiBaseUrl.save')}
+                        </button>
+                        {apiBaseUrlSaveState === 'success' && (
+                          <span className="text-xs font-medium text-[var(--success)]">
+                            {t('settings.apiBaseUrl.saved')}
+                          </span>
+                        )}
+                        {apiBaseUrlSaveState === 'error' && (
+                          <span className="text-xs font-medium text-[var(--error)]">
+                            {t('settings.apiBaseUrl.saveFailed')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="border-t border-[var(--border-subtle)]" />
+
+                  {/* Language */}
+                  <section className="space-y-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.language.title')}
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.language.description')}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleLanguageChange('en')}
+                        className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none ${
+                          language === 'en' ?
+                            'border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-hover)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)]'
+                        }`}
+                        aria-label="English"
+                        aria-pressed={language === 'en'}
+                      >
+                        {t('settings.language.english')}
+                      </button>
+                      <button
+                        onClick={() => handleLanguageChange('vi')}
+                        className={`flex-1 rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none ${
+                          language === 'vi' ?
+                            'border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent-hover)]'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)]'
+                        }`}
+                        aria-label="Tiếng Việt"
+                        aria-pressed={language === 'vi'}
+                      >
+                        {t('settings.language.vietnamese')}
+                      </button>
+                    </div>
+                  </section>
+
+                  <div className="border-t border-[var(--border-subtle)]" />
 
                   {/* Workspace Directory */}
                   <section className="space-y-4">
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-                        Workspace Directory
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.workspace.title')}
                       </h2>
-                      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                        Directory where files are read and written. Default: Desktop/claude-agent.
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.workspace.description')}
                       </p>
                     </div>
-                    {currentWorkspaceDir && (
-                      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 font-mono text-sm text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300">
-                        {currentWorkspaceDir}
+                    {Boolean((window as any).__isWebMode) ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 font-mono text-sm text-[var(--text-secondary)]">
+                          <Folder className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                          <span className="truncate">{currentWorkspaceDir || '/workspace'}</span>
+                        </div>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          Để mở folder trên máy bạn, cài ứng dụng:{' '}
+                          <a
+                            href="https://www.npmjs.com/package/claude-viber"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-[var(--accent)] hover:underline"
+                          >
+                            npm i -g claude-viber && claude-viber-app
+                          </a>
+                        </p>
                       </div>
-                    )}
-                    <input
-                      id="workspace-input"
-                      type="text"
-                      value={workspaceDir}
-                      onChange={(e) => setWorkspaceDir(e.target.value)}
-                      placeholder={currentWorkspaceDir || '/path/to/workspace'}
-                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 font-mono text-sm text-neutral-900 placeholder-neutral-400 transition focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-neutral-300"
-                    />
-                    <div className="flex justify-end">
-                      <button
-                        onClick={handleSaveWorkspace}
-                        disabled={!workspaceDir.trim() || isSavingWorkspace}
-                        className="rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200"
-                      >
-                        {isSavingWorkspace ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                    {workspaceSaveStatus === 'success' && (
-                      <p className="text-xs font-medium text-green-600 dark:text-green-400">
-                        Workspace directory updated successfully
-                      </p>
-                    )}
-                    {workspaceSaveStatus === 'error' && (
-                      <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                        Failed to update workspace directory
-                      </p>
+                    ) : (
+                      <>
+                        <input
+                          id="workspace-input"
+                          type="text"
+                          value={workspaceDir || currentWorkspaceDir}
+                          onChange={(e) => setWorkspaceDir(e.target.value)}
+                          placeholder="/path/to/workspace"
+                          aria-label={t('settings.workspace.title')}
+                          className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 font-mono text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] transition focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:outline-none"
+                        />
+                        <div className="flex justify-end gap-3">
+                          {currentWorkspaceDir && (
+                            <button
+                              onClick={() => {
+                                window.electron.shell.openFolder(currentWorkspaceDir).catch(() => {});
+                              }}
+                              className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-5 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                              {t('settings.workspace.openFolder')}
+                            </button>
+                          )}
+                          <button
+                            onClick={handleSaveWorkspace}
+                            disabled={
+                              !(workspaceDir || currentWorkspaceDir).trim() || isSavingWorkspace
+                            }
+                            className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-hover)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {isSavingWorkspace ?
+                              t('settings.workspace.saving')
+                            : t('settings.workspace.save')}
+                          </button>
+                        </div>
+                        {workspaceSaveStatus === 'success' && (
+                          <p className="text-xs font-medium text-[var(--success)]">
+                            {t('settings.workspace.success')}
+                          </p>
+                        )}
+                        {workspaceSaveStatus === 'error' && (
+                          <p className="text-xs font-medium text-[var(--error)]">
+                            {t('settings.workspace.error')}
+                          </p>
+                        )}
+                      </>
                     )}
                   </section>
 
-                  <div className="border-t border-neutral-200/80 dark:border-neutral-800" />
+                  <div className="border-t border-[var(--border-subtle)]" />
+
+                  {/* MCP Server Management */}
+                  <section className="space-y-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.mcp.title')}
+                      </h2>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.mcp.description')}
+                      </p>
+                    </div>
+                    <McpManager sessionMcpServers={sessionMcpServers} />
+                  </section>
+
+                  <div className="border-t border-[var(--border-subtle)]" />
 
                   {/* Diagnostics */}
                   <section className="space-y-4">
                     <div>
-                      <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-                        Diagnostics
+                      <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                        {t('settings.diagnostics.title')}
                       </h2>
-                      <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                        Enable debug output from Claude Code process. Messages appear inline with
-                        chat responses.
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {t('settings.diagnostics.description')}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200/80 bg-neutral-50 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                          {debugMode ? 'Enabled' : 'Disabled'}
-                        </p>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
                           {debugMode ?
-                            'Verbose tool output will stream with responses.'
-                          : 'Keep chat replies cleaner by hiding debug events.'}
+                            t('settings.diagnostics.enabled')
+                          : t('settings.diagnostics.disabled')}
+                        </p>
+                        <p className="text-xs text-[var(--text-muted)]">
+                          {debugMode ?
+                            t('settings.diagnostics.enabledHint')
+                          : t('settings.diagnostics.disabledHint')}
                         </p>
                       </div>
                       <button
@@ -420,10 +632,8 @@ function Settings({ onBack }: SettingsProps) {
                         type="button"
                         onClick={handleToggleDebugMode}
                         disabled={isSavingDebugMode}
-                        className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full border border-transparent px-0.5 transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-neutral-900/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
-                          debugMode ?
-                            'bg-neutral-900 dark:bg-neutral-100'
-                          : 'bg-neutral-200 dark:bg-neutral-700'
+                        className={`relative inline-flex h-7 w-14 shrink-0 cursor-pointer items-center rounded-full border border-transparent px-0.5 transition-colors duration-200 ease-in-out focus:ring-2 focus:ring-[var(--accent)]/30 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
+                          debugMode ? 'bg-[var(--accent)]' : 'bg-[var(--bg-raised)]'
                         }`}
                         role="switch"
                         aria-checked={debugMode}
@@ -437,7 +647,7 @@ function Settings({ onBack }: SettingsProps) {
                     </div>
                   </section>
 
-                  <div className="border-t border-neutral-200/80 dark:border-neutral-800" />
+                  <div className="border-t border-[var(--border-subtle)]" />
 
                   {/* Developer / Debug Info Section */}
                   <section className="space-y-4">
@@ -449,133 +659,94 @@ function Settings({ onBack }: SettingsProps) {
                           loadEnvVars();
                         }
                       }}
-                      className="flex w-full items-center justify-between rounded-2xl border border-neutral-200/80 bg-neutral-50 px-4 py-3 text-left text-sm font-semibold text-neutral-700 transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-100 dark:hover:border-neutral-700/60"
+                      className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-left text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--border-medium)] hover:bg-[var(--bg-raised)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
                     >
-                      <span>Developer / Debug Info</span>
+                      <span>{t('settings.diagnostics.debugInfo')}</span>
                       {isDebugExpanded ?
                         <ChevronUp className="h-4 w-4" />
                       : <ChevronDown className="h-4 w-4" />}
                     </button>
                     {isDebugExpanded && (
-                      <div className="space-y-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/80 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
+                      <div className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
                         {/* App Information */}
                         <div className="space-y-2">
-                          <p className="text-[11px] font-semibold tracking-[0.35em] text-neutral-400 uppercase dark:text-neutral-500">
-                            App Information
+                          <p className="text-[11px] font-semibold tracking-[0.35em] text-[var(--text-disabled)] uppercase">
+                            {t('settings.diagnostics.appInfo')}
                           </p>
                           {isLoadingDiagnosticMetadata ?
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Loading...
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.loadingInfo')}
                             </p>
                           : diagnosticMetadata ?
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  App Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.appVersion}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  Electron Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.electronVersion}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  Chromium Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.chromiumVersion}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  V8 Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.v8Version}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  Node.js Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.nodeVersion}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  Claude Agent SDK Version
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.claudeAgentSdkVersion}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  Platform
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.platform} ({diagnosticMetadata.arch})
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  OS Type
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.osType}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                  OS Release
-                                </p>
-                                <p className="mt-0.5 font-mono text-xs text-neutral-700 dark:text-neutral-300">
-                                  {diagnosticMetadata.osRelease}
-                                </p>
-                              </div>
+                              {[
+                                ['appVersion', diagnosticMetadata.appVersion],
+                                ['electronVersion', diagnosticMetadata.electronVersion],
+                                ['chromiumVersion', diagnosticMetadata.chromiumVersion],
+                                ['v8Version', diagnosticMetadata.v8Version],
+                                ['nodeVersion', diagnosticMetadata.nodeVersion],
+                                ['sdkVersion', diagnosticMetadata.claudeAgentSdkVersion],
+                                [
+                                  'platform',
+                                  `${diagnosticMetadata.platform} (${diagnosticMetadata.arch})`
+                                ],
+                                ['osType', diagnosticMetadata.osType],
+                                ['osRelease', diagnosticMetadata.osRelease]
+                              ].map(([key, value]) => (
+                                <div key={key}>
+                                  <p className="text-xs font-semibold text-[var(--text-disabled)]">
+                                    {t(`settings.diagnostics.${key}`)}
+                                  </p>
+                                  <p className="mt-0.5 font-mono text-xs text-[var(--text-secondary)]">
+                                    {value}
+                                  </p>
+                                </div>
+                              ))}
                             </div>
-                          : <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Failed to load diagnostic information
+                          : <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.failedInfo')}
                             </p>
                           }
                         </div>
 
-                        <div className="border-t border-neutral-200/80 dark:border-neutral-800" />
+                        <div className="border-t border-[var(--border-subtle)]" />
 
                         <div className="space-y-2">
-                          <p className="text-[11px] font-semibold tracking-[0.35em] text-neutral-400 uppercase dark:text-neutral-500">
-                            PATH Environment Variable
+                          <p className="text-[11px] font-semibold tracking-[0.35em] text-[var(--text-disabled)] uppercase">
+                            {t('settings.diagnostics.pathEnvVar')}
                           </p>
                           {isLoadingPathInfo ?
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Loading...
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.loadingInfo')}
                             </p>
                           : pathInfo ?
                             <div className="space-y-2">
-                              <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                <span className="font-medium">Platform:</span> {pathInfo.platform}
+                              <div className="text-xs text-[var(--text-muted)]">
+                                <span className="font-medium">
+                                  {t('settings.diagnostics.pathPlatform')}:
+                                </span>{' '}
+                                {pathInfo.platform}
                                 {' • '}
-                                <span className="font-medium">Entries:</span> {pathInfo.pathCount}
+                                <span className="font-medium">
+                                  {t('settings.diagnostics.pathEntries')}:
+                                </span>{' '}
+                                {pathInfo.pathCount}
                                 {' • '}
-                                <span className="font-medium">Separator:</span>{' '}
-                                {pathInfo.pathSeparator === ';' ? '; (Windows)' : ': (Unix)'}
+                                <span className="font-medium">
+                                  {t('settings.diagnostics.pathSeparator')}:
+                                </span>{' '}
+                                {pathInfo.pathSeparator === ';' ?
+                                  t('settings.diagnostics.pathSepWindows')
+                                : t('settings.diagnostics.pathSepUnix')}
                               </div>
-                              <div className="max-h-64 overflow-y-auto rounded-2xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-950/40">
+                              <div className="max-h-64 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-deepest)] px-3 py-2">
                                 <div className="space-y-1">
                                   {pathInfo.pathEntries.map((entry, index) => (
                                     <div
                                       key={index}
-                                      className="font-mono text-xs text-neutral-700 dark:text-neutral-300"
+                                      className="font-mono text-xs text-[var(--text-secondary)]"
                                     >
-                                      <span className="text-neutral-400 dark:text-neutral-500">
+                                      <span className="text-[var(--text-disabled)]">
                                         {String(index + 1).padStart(3, ' ')}.
                                       </span>{' '}
                                       {entry}
@@ -584,43 +755,45 @@ function Settings({ onBack }: SettingsProps) {
                                 </div>
                               </div>
                             </div>
-                          : <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Failed to load PATH info
+                          : <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.failedPath')}
                             </p>
                           }
                         </div>
 
-                        <div className="border-t border-neutral-200/80 dark:border-neutral-800" />
+                        <div className="border-t border-[var(--border-subtle)]" />
 
                         <div className="space-y-2">
-                          <p className="text-[11px] font-semibold tracking-[0.35em] text-neutral-400 uppercase dark:text-neutral-500">
-                            All Environment Variables
+                          <p className="text-[11px] font-semibold tracking-[0.35em] text-[var(--text-disabled)] uppercase">
+                            {t('settings.diagnostics.allEnvVars')}
                           </p>
                           {isLoadingEnvVars ?
-                            <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Loading...
+                            <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.loadingInfo')}
                             </p>
                           : envVars ?
                             <div className="space-y-2">
-                              <div className="text-xs text-neutral-600 dark:text-neutral-400">
-                                <span className="font-medium">Total:</span> {envVars.length}{' '}
-                                variables
+                              <div className="text-xs text-[var(--text-muted)]">
+                                <span className="font-medium">
+                                  {t('settings.diagnostics.totalVars')}:
+                                </span>{' '}
+                                {envVars.length} {t('settings.diagnostics.variables')}
                               </div>
-                              <div className="max-h-64 overflow-y-auto rounded-2xl border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-950/40">
+                              <div className="max-h-64 overflow-y-auto rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-deepest)] px-3 py-2">
                                 <div className="space-y-1">
                                   {envVars.map((envVar, index) => (
                                     <div
                                       key={index}
-                                      className="font-mono text-xs text-neutral-700 dark:text-neutral-300"
+                                      className="font-mono text-xs text-[var(--text-secondary)]"
                                     >
-                                      <span className="text-neutral-400 dark:text-neutral-500">
+                                      <span className="text-[var(--text-disabled)]">
                                         {String(index + 1).padStart(3, ' ')}.
                                       </span>{' '}
-                                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                                      <span className="font-semibold text-[var(--text-primary)]">
                                         {envVar.key}
                                       </span>
                                       {' = '}
-                                      <span className="text-neutral-600 dark:text-neutral-400">
+                                      <span className="text-[var(--text-muted)]">
                                         {envVar.value}
                                       </span>
                                     </div>
@@ -628,8 +801,8 @@ function Settings({ onBack }: SettingsProps) {
                                 </div>
                               </div>
                             </div>
-                          : <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                              Failed to load environment variables
+                          : <p className="text-xs text-[var(--text-muted)]">
+                              {t('settings.diagnostics.failedEnvVars')}
                             </p>
                           }
                         </div>

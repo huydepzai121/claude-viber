@@ -50,3 +50,38 @@ export interface ShellResponse {
   success: boolean;
   error?: string;
 }
+
+export interface SlashCommand {
+  name: string;
+  description: string;
+  argumentHint: string;
+}
+
+export interface SessionInitData {
+  tools: string[];
+  slashCommands: string[];
+  skills: string[];
+  plugins: { name: string; path: string }[];
+  mcpServers: { name: string; status: string }[];
+  model: string;
+  permissionMode: string;
+}
+
+export interface ModelInfo {
+  value: string;
+  displayName: string;
+  description: string;
+}
+
+export interface SkillInfo {
+  name: string;
+  description: string;
+  path: string;
+}
+
+export interface FileInfo {
+  exists: boolean;
+  size: number;
+  extension: string;
+  mimeType: string;
+}

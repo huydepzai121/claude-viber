@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-import type { ChatModelPreference, SendMessagePayload } from '../shared/types/ipc';
+import type {
+  ChatModelPreference,
+  ModelInfo,
+  SendMessagePayload,
+  SessionInitData,
+  SlashCommand
+} from '../shared/types/ipc';
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
@@ -13,6 +19,7 @@ contextBridge.exposeInMainWorld('electron', {
   chat: {
     sendMessage: (payload: SendMessagePayload) => ipcRenderer.invoke('chat:send-message', payload),
     stopMessage: () => ipcRenderer.invoke('chat:stop-message'),
+    startSession: () => ipcRenderer.invoke('chat:start-session'),
     resetSession: (resumeSessionId?: string | null) =>
       ipcRenderer.invoke('chat:reset-session', resumeSessionId),
     getModelPreference: () => ipcRenderer.invoke('chat:get-model-preference'),
@@ -121,7 +128,32 @@ contextBridge.exposeInMainWorld('electron', {
       ) => callback(data);
       ipcRenderer.on('chat:session-updated', listener);
       return () => ipcRenderer.removeListener('chat:session-updated', listener);
-    }
+    },
+    onSessionInit: (callback: (data: SessionInitData) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: SessionInitData) => callback(data);
+      ipcRenderer.on('chat:session-init', listener);
+      return () => ipcRenderer.removeListener('chat:session-init', listener);
+    },
+    onSlashCommands: (callback: (commands: SlashCommand[]) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, commands: SlashCommand[]) =>
+        callback(commands);
+      ipcRenderer.on('chat:slash-commands', listener);
+      return () => ipcRenderer.removeListener('chat:slash-commands', listener);
+    },
+    onSupportedModels: (callback: (models: ModelInfo[]) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, models: ModelInfo[]) => callback(models);
+      ipcRenderer.on('chat:supported-models', listener);
+      return () => ipcRenderer.removeListener('chat:supported-models', listener);
+    },
+    setModelDirect: (modelId: string) => ipcRenderer.invoke('chat:set-model-direct', modelId),
+    onAskUserQuestion: (callback: (data: { questions: unknown[] }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { questions: unknown[] }) =>
+        callback(data);
+      ipcRenderer.on('chat:ask-user-question', listener);
+      return () => ipcRenderer.removeListener('chat:ask-user-question', listener);
+    },
+    answerUserQuestion: (answers: Record<string, string[]>) =>
+      ipcRenderer.invoke('chat:answer-user-question', { answers })
   },
   config: {
     getWorkspaceDir: () => ipcRenderer.invoke('config:get-workspace-dir'),
@@ -133,10 +165,47 @@ contextBridge.exposeInMainWorld('electron', {
     getEnvVars: () => ipcRenderer.invoke('config:get-env-vars'),
     getDiagnosticMetadata: () => ipcRenderer.invoke('config:get-diagnostic-metadata'),
     getApiKeyStatus: () => ipcRenderer.invoke('config:get-api-key-status'),
-    setApiKey: (apiKey?: string | null) => ipcRenderer.invoke('config:set-api-key', apiKey)
+    setApiKey: (apiKey?: string | null) => ipcRenderer.invoke('config:set-api-key', apiKey),
+    getApiBaseUrl: () => ipcRenderer.invoke('config:get-api-base-url'),
+    setApiBaseUrl: (apiBaseUrl?: string | null) =>
+      ipcRenderer.invoke('config:set-api-base-url', apiBaseUrl),
+    getMcpServers: () => ipcRenderer.invoke('config:get-mcp-servers'),
+    setMcpServers: (mcpServers: Record<string, unknown>) =>
+      ipcRenderer.invoke('config:set-mcp-servers', mcpServers),
+    getClaudeCommands: () => ipcRenderer.invoke('config:get-claude-commands'),
+    browseFolder: () => ipcRenderer.invoke('config:browse-folder'),
+    getRecentFolders: () => ipcRenderer.invoke('config:get-recent-folders'),
+    addRecentFolder: (folder: string) => ipcRenderer.invoke('config:add-recent-folder', folder),
+    getUserProfile: () => ipcRenderer.invoke('config:get-user-profile'),
+    setUserProfile: (profile: { name: string; plan: string }) =>
+      ipcRenderer.invoke('config:set-user-profile', profile),
+    getOnboardingState: () => ipcRenderer.invoke('config:get-onboarding-state'),
+    setOnboardingDismissed: (dismissed: boolean) =>
+      ipcRenderer.invoke('config:set-onboarding-dismissed', dismissed),
+    setOnboardingTaskCompleted: (taskId: string, completed: boolean) =>
+      ipcRenderer.invoke('config:set-onboarding-task-completed', taskId, completed),
+    getSidebarCollapsed: () => ipcRenderer.invoke('config:get-sidebar-collapsed'),
+    setSidebarCollapsed: (collapsed: boolean) =>
+      ipcRenderer.invoke('config:set-sidebar-collapsed', collapsed),
+    getSkills: () => ipcRenderer.invoke('config:get-skills'),
+    onWorkspaceChanged: (callback: (data: { workspaceDir: string }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { workspaceDir: string }) =>
+        callback(data);
+      ipcRenderer.on('config:workspace-changed', listener);
+      return () => ipcRenderer.removeListener('config:workspace-changed', listener);
+    }
+  },
+  file: {
+    readText: (filePath: string) => ipcRenderer.invoke('file:read-text', filePath),
+    readBinaryBase64: (filePath: string) => ipcRenderer.invoke('file:read-binary-base64', filePath),
+    getInfo: (filePath: string) => ipcRenderer.invoke('file:get-info', filePath),
+    openInDefaultApp: (filePath: string) =>
+      ipcRenderer.invoke('file:open-in-default-app', filePath),
+    convertToImages: (filePath: string) => ipcRenderer.invoke('file:convert-to-images', filePath)
   },
   shell: {
-    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+    openFolder: (folderPath: string) => ipcRenderer.invoke('shell:open-folder', folderPath)
   },
   conversation: {
     list: () => ipcRenderer.invoke('conversation:list'),

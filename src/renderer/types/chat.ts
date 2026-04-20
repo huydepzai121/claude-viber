@@ -1,6 +1,7 @@
 // Import tool input types from Claude Agent SDK for end-to-end type safety
 import type {
   AgentInput,
+  AskUserQuestionInput,
   BashInput,
   FileEditInput,
   FileReadInput,
@@ -23,6 +24,7 @@ export type EditInput = FileEditInput;
 // Re-export other SDK types directly
 export type {
   AgentInput,
+  AskUserQuestionInput,
   BashInput,
   GlobInput,
   GrepInput,
@@ -34,6 +36,7 @@ export type {
 
 export type ToolInput =
   | AgentInput
+  | AskUserQuestionInput
   | BashInput
   | ReadInput
   | WriteInput

@@ -10,9 +10,15 @@ export interface AppConfig {
   debugMode?: boolean;
   chatModelPreference?: ChatModelPreference | 'smart';
   apiKey?: string;
+  apiBaseUrl?: string;
+  recentFolders?: string[];
+  userProfile?: { name: string; plan: string };
+  onboardingDismissed?: boolean;
+  onboardingCompleted?: Record<string, boolean>;
+  sidebarCollapsed?: boolean;
 }
 
-const DEFAULT_MODEL_PREFERENCE: ChatModelPreference = 'fast';
+const DEFAULT_MODEL_PREFERENCE: ChatModelPreference = 'smart-sonnet';
 const DEFAULT_SMART_MODEL: ChatModelPreference = 'smart-sonnet';
 
 function normalizeChatModelPreference(
@@ -76,6 +82,22 @@ export function setApiKey(apiKey: string | null): void {
   saveConfig(config);
 }
 
+export function getApiBaseUrl(): string | null {
+  const config = loadConfig();
+  const url = config.apiBaseUrl?.trim();
+  return url || null;
+}
+
+export function setApiBaseUrl(url: string | null): void {
+  const config = loadConfig();
+  if (url && url.trim()) {
+    config.apiBaseUrl = url.trim();
+  } else {
+    delete config.apiBaseUrl;
+  }
+  saveConfig(config);
+}
+
 function getApiKeyLastFour(key: string | null | undefined): string | null {
   if (!key) {
     return null;
@@ -84,7 +106,7 @@ function getApiKeyLastFour(key: string | null | undefined): string | null {
   if (!trimmed) {
     return null;
   }
-  return trimmed.slice(-4);
+  return '****';
 }
 
 export function getApiKeyStatus(): {
@@ -127,6 +149,59 @@ export function getChatModelPreferenceSetting(): ChatModelPreference {
 export function setChatModelPreferenceSetting(preference: ChatModelPreference): void {
   const config = loadConfig();
   config.chatModelPreference = normalizeChatModelPreference(preference);
+  saveConfig(config);
+}
+
+export function getRecentFolders(): string[] {
+  return loadConfig().recentFolders ?? [];
+}
+
+export function addRecentFolder(folder: string): void {
+  const config = loadConfig();
+  const recent = config.recentFolders ?? [];
+  const filtered = recent.filter((f) => f !== folder);
+  config.recentFolders = [folder, ...filtered].slice(0, 10);
+  saveConfig(config);
+}
+
+export function getUserProfile(): { name: string; plan: string } {
+  return loadConfig().userProfile ?? { name: 'User', plan: 'Pro plan' };
+}
+
+export function setUserProfile(profile: { name: string; plan: string }): void {
+  const config = loadConfig();
+  config.userProfile = profile;
+  saveConfig(config);
+}
+
+export function getOnboardingState(): { dismissed: boolean; completed: Record<string, boolean> } {
+  const config = loadConfig();
+  return {
+    dismissed: config.onboardingDismissed ?? false,
+    completed: config.onboardingCompleted ?? {}
+  };
+}
+
+export function setOnboardingDismissed(dismissed: boolean): void {
+  const config = loadConfig();
+  config.onboardingDismissed = dismissed;
+  saveConfig(config);
+}
+
+export function setOnboardingTaskCompleted(taskId: string, completed: boolean): void {
+  const config = loadConfig();
+  if (!config.onboardingCompleted) config.onboardingCompleted = {};
+  config.onboardingCompleted[taskId] = completed;
+  saveConfig(config);
+}
+
+export function getSidebarCollapsed(): boolean {
+  return loadConfig().sidebarCollapsed ?? false;
+}
+
+export function setSidebarCollapsed(collapsed: boolean): void {
+  const config = loadConfig();
+  config.sidebarCollapsed = collapsed;
   saveConfig(config);
 }
 
@@ -356,6 +431,12 @@ export function buildClaudeSessionEnv(): Record<string, string> {
     env.ANTHROPIC_API_KEY = apiKey;
   }
 
+  // Add custom API base URL if configured
+  const apiBaseUrl = getApiBaseUrl();
+  if (apiBaseUrl) {
+    env.ANTHROPIC_BASE_URL = apiBaseUrl;
+  }
+
   // Set CLAUDE_CODE_GIT_BASH_PATH for Windows (required by Claude Code)
   if (process.platform === 'win32') {
     const bashExePath = getBashExePath();
@@ -414,10 +495,43 @@ export async function ensureWorkspaceDir(): Promise<void> {
       // Copy entire .claude directory (including skills)
       await cp(sourceClaudeDir, destClaudeDir, { recursive: true });
       console.log('.claude directory synced successfully');
+
+      // Write project-level settings.json to override ~/.claude/settings.json env vars.
+      // This ensures the app's API key and base URL take precedence over
+      // ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL from user settings.
+      syncProjectSettings(destClaudeDir);
     } else {
       console.warn(`Could not find .claude directory at ${sourceClaudeDir}`);
     }
   } catch (error) {
     console.error('Failed to sync .claude directory:', error);
+  }
+}
+
+/**
+ * Writes a project-level settings.json into the workspace .claude/ directory.
+ * This overrides specific env vars from ~/.claude/settings.json so the CLI
+ * subprocess uses the app's API key and base URL instead of the user's Claude Code config.
+ */
+function syncProjectSettings(destClaudeDir: string): void {
+  try {
+    const apiKey = getApiKey();
+    const apiBaseUrl = getApiBaseUrl();
+
+    const env: Record<string, string> = {};
+    if (apiKey) {
+      env.ANTHROPIC_API_KEY = apiKey;
+      env.ANTHROPIC_AUTH_TOKEN = apiKey;
+    }
+    if (apiBaseUrl) {
+      env.ANTHROPIC_BASE_URL = apiBaseUrl;
+    }
+
+    const projectSettings = { env };
+    const settingsPath = join(destClaudeDir, 'settings.json');
+    writeFileSync(settingsPath, JSON.stringify(projectSettings, null, 2));
+    console.log('Project settings.json written with app API config');
+  } catch (error) {
+    console.error('Failed to write project settings.json:', error);
   }
 }

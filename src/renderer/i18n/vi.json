@@ -1,0 +1,222 @@
+{
+  "titleBar": {
+    "chats": "Hội thoại",
+    "openChatHistory": "Mở lịch sử trò chuyện",
+    "startNewChat": "Bắt đầu cuộc trò chuyện mới",
+    "switchToVietnamese": "Chuyển sang tiếng Việt",
+    "switchToEnglish": "Chuyển sang tiếng Anh",
+    "openSettings": "Mở cài đặt"
+  },
+  "chat": {
+    "placeholder": "Tôi có thể giúp gì cho bạn?",
+    "streaming": "Đang phản hồi...",
+    "emptyStateLabel": "Viber.vn Cowork",
+    "send": "Gửi tin nhắn",
+    "stopStreaming": "Dừng phản hồi"
+  },
+  "chatHistory": {
+    "title": "Tiếp tục cuộc trò chuyện",
+    "subtitle": "Tiếp tục từ nơi bạn dừng lại hoặc bắt đầu mới",
+    "newChat": "Bắt đầu trò chuyện mới",
+    "loading": "Đang tải...",
+    "noConversations": "Chưa có cuộc trò chuyện nào",
+    "noConversationsHint": "Bắt đầu trò chuyện mới để xem ở đây",
+    "defaultPreview": "Nhấn để tiếp tục cuộc trò chuyện từ nơi bạn dừng lại.",
+    "deleteConfirm": "Bạn có chắc muốn xóa cuộc trò chuyện này?",
+    "closeDrawer": "Đóng",
+    "deleteConversation": "Xóa cuộc trò chuyện"
+  },
+  "settings": {
+    "title": "Cài đặt",
+    "subtitle": "Cấu hình API và thư mục làm việc cho Claude Agent Desktop.",
+    "back": "Quay lại",
+    "loading": "Đang tải cài đặt...",
+    "apiKey": {
+      "title": "Khóa API Anthropic",
+      "description": "Đặt khóa API cục bộ hoặc sử dụng biến môi trường ANTHROPIC_API_KEY.",
+      "usingEnvKey": "Đang dùng khóa từ biến môi trường",
+      "storedLocally": "Đã lưu cục bộ",
+      "noKeyConfigured": "Chưa cấu hình khóa",
+      "envOverride": "Biến môi trường",
+      "placeholder": "sk-ant-...",
+      "clearStoredKey": "Xóa khóa đã lưu",
+      "save": "Lưu khóa API",
+      "saving": "Đang lưu...",
+      "saved": "Đã lưu khóa API",
+      "saveFailed": "Không thể lưu khóa"
+    },
+    "apiBaseUrl": {
+      "title": "URL API Gốc",
+      "description": "Endpoint API tùy chỉnh cho proxy bên thứ ba (vd: OpenRouter). Để trống để dùng API Anthropic mặc định.",
+      "placeholder": "https://openrouter.ai/api/v1",
+      "save": "Lưu",
+      "saving": "Đang lưu...",
+      "saved": "Đã lưu URL",
+      "saveFailed": "Không thể lưu URL",
+      "clear": "Xóa"
+    },
+    "language": {
+      "title": "Ngôn ngữ",
+      "description": "Chọn ngôn ngữ hiển thị ưa thích.",
+      "english": "English",
+      "vietnamese": "Tiếng Việt"
+    },
+    "workspace": {
+      "title": "Thư mục làm việc",
+      "description": "Thư mục đọc và ghi tệp. Mặc định: Desktop/claude-agent.",
+      "save": "Lưu",
+      "saving": "Đang lưu...",
+      "openFolder": "Mở thư mục",
+      "success": "Đã cập nhật thư mục làm việc",
+      "error": "Không thể cập nhật thư mục làm việc"
+    },
+    "mcp": {
+      "title": "MCP Servers",
+      "description": "Quản lý các server Model Context Protocol. Thay đổi được lưu vào ~/.claude/settings.json.",
+      "noServers": "Chưa có MCP server nào. Thêm bên dưới.",
+      "addTitle": "Thêm MCP Server (stdio)",
+      "namePlaceholder": "Tên server",
+      "commandPlaceholder": "Lệnh (vd: npx)",
+      "argsPlaceholder": "Tham số (cách nhau bằng dấu cách)",
+      "add": "Thêm Server",
+      "remove": "Xóa server"
+    },
+    "diagnostics": {
+      "title": "Chẩn đoán",
+      "description": "Bật đầu ra debug từ tiến trình Claude Code. Hiển thị cùng với phản hồi chat.",
+      "enabled": "Đã bật",
+      "disabled": "Đã tắt",
+      "enabledHint": "Đầu ra chi tiết sẽ hiển thị cùng phản hồi.",
+      "disabledHint": "Ẩn sự kiện debug để chat sạch hơn.",
+      "debugInfo": "Thông tin dành cho nhà phát triển",
+      "appInfo": "Thông tin ứng dụng",
+      "appVersion": "Phiên bản ứng dụng",
+      "electronVersion": "Phiên bản Electron",
+      "chromiumVersion": "Phiên bản Chromium",
+      "v8Version": "Phiên bản V8",
+      "nodeVersion": "Phiên bản Node.js",
+      "sdkVersion": "Phiên bản Claude Agent SDK",
+      "platform": "Nền tảng",
+      "osType": "Loại OS",
+      "osRelease": "Phiên bản OS",
+      "loadingInfo": "Đang tải...",
+      "failedInfo": "Không thể tải thông tin chẩn đoán",
+      "pathEnvVar": "Biến môi trường PATH",
+      "pathPlatform": "Nền tảng",
+      "pathEntries": "Mục",
+      "pathSeparator": "Dấu phân cách",
+      "pathSepWindows": "; (Windows)",
+      "pathSepUnix": ": (Unix)",
+      "failedPath": "Không thể tải thông tin PATH",
+      "allEnvVars": "Tất cả biến môi trường",
+      "totalVars": "Tổng",
+      "variables": "biến",
+      "failedEnvVars": "Không thể tải biến môi trường"
+    }
+  },
+  "update": {
+    "available": "Có bản cập nhật:",
+    "whatsNew": "Có gì mới",
+    "downloading": "Đang tải…",
+    "download": "Tải xuống",
+    "dismiss": "Bỏ qua",
+    "ready": "Bản cập nhật sẵn sàng:",
+    "restartHint": "Khởi động lại Claude Agent Desktop để hoàn tất cài đặt.",
+    "restartInstall": "Khởi động lại & Cài đặt",
+    "checking": "Đang kiểm tra cập nhật…",
+    "upToDate": "Bạn đang dùng phiên bản mới nhất."
+  },
+  "attachments": {
+    "attach": "Đính kèm tệp",
+    "remove": "Xóa",
+    "tooLarge": "\"{fileName}\" lớn hơn {maxMb} MB. Vui lòng thả trực tiếp vào thư mục làm việc Claude Agent tại {workspace}.",
+    "workspaceFallback": "thư mục claude-agent đã cấu hình"
+  },
+  "model": {
+    "fast": "Nhanh",
+    "smart": "Thông minh",
+    "sonnet": "Sonnet",
+    "opus": "Opus",
+    "select": "Chọn model",
+    "loading": "Đang tải model…"
+  },
+  "sessionInfo": {
+    "tools": "{count} công cụ",
+    "mcpServers": "{connected}/{total} MCP",
+    "skills": "{count} kỹ năng",
+    "toolsLabel": "Công cụ",
+    "mcpLabel": "MCP Servers",
+    "skillsLabel": "Kỹ năng",
+    "pluginsLabel": "Plugins"
+  },
+  "sidebar": {
+    "newTask": "Tác vụ mới",
+    "search": "Tìm kiếm",
+    "ideas": "Ý tưởng",
+    "settings": "Cài đặt",
+    "getToKnow": "Làm quen với Cowork",
+    "recents": "Gần đây",
+    "noSessions": "Chưa có phiên nào",
+    "updatedTo": "Đã cập nhật lên {version}",
+    "relaunchToApply": "Khởi động lại để áp dụng",
+    "relaunch": "Khởi động lại",
+    "user": "Người dùng",
+    "freePlan": "Gói miễn phí",
+    "expand": "Mở rộng sidebar",
+    "collapse": "Thu gọn sidebar",
+    "dismissOnboarding": "Bỏ qua"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "cowork": "Cowork",
+    "code": "Code"
+  },
+  "greeting": {
+    "title": "Hãy hoàn thành một việc gì đó nào",
+    "subtitle": "Cowork đang trong giai đoạn thử nghiệm. Tìm hiểu cách sử dụng an toàn."
+  },
+  "folderPicker": {
+    "workInProject": "Làm việc trong dự án",
+    "browse": "Duyệt...",
+    "recentFolders": "Thư mục gần đây",
+    "noRecentFolders": "Chưa có thư mục gần đây"
+  },
+  "modelSelector": {
+    "opus": "Opus 4.6",
+    "opusDesc": "Mạnh nhất cho công việc phức tạp",
+    "sonnet": "Sonnet 4.6",
+    "sonnetDesc": "Hiệu quả nhất cho công việc hàng ngày",
+    "haiku": "Haiku 4.5",
+    "haikuDesc": "Nhanh nhất cho câu trả lời nhanh",
+    "extendedThinking": "Suy nghĩ mở rộng",
+    "extendedThinkingDesc": "Suy nghĩ lâu hơn cho tác vụ phức tạp"
+  },
+  "questionDialog": {
+    "skip": "Bỏ qua",
+    "selected": "{count} đã chọn",
+    "somethingElse": "Khác",
+    "of": "/"
+  },
+  "filePreview": {
+    "title": "Xem trước tệp",
+    "openInApp": "Mở trong ứng dụng",
+    "openInAppFallback": "Mở bằng ứng dụng mặc định",
+    "close": "Đóng xem trước",
+    "loading": "Đang tải xem trước...",
+    "error": "Không thể tải xem trước",
+    "libreofficeNotFound": "Không tìm thấy LibreOffice. Cài đặt để xem trước file PPTX.",
+    "page": "Trang {current} / {total}",
+    "prevPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "preview": "Xem trước",
+    "unsupported": "Không hỗ trợ xem trước loại tệp này"
+  },
+  "skills": {
+    "title": "Kỹ năng",
+    "subtitle": "Các kỹ năng có sẵn trong workspace",
+    "noSkills": "Không tìm thấy kỹ năng",
+    "noSkillsHint": "Thêm kỹ năng vào .claude/skills/ trong workspace",
+    "loaded": "Đã tải",
+    "closePanel": "Đóng panel kỹ năng"
+  }
+}

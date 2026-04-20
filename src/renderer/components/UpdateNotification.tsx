@@ -1,6 +1,8 @@
 import { Download, ExternalLink, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { useTranslation } from '@/i18n/context';
+
 import type { UpdateStatus } from '../electron';
 
 const RELEASES_URL = 'https://github.com/pheuter/claude-agent-desktop/releases';
@@ -8,9 +10,9 @@ const RELEASES_URL = 'https://github.com/pheuter/claude-agent-desktop/releases';
 export default function UpdateNotification() {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [isDismissed, setIsDismissed] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
-    // Load initial status
     window.electron.update
       .getStatus()
       .then((initialStatus) => {
@@ -20,10 +22,8 @@ export default function UpdateNotification() {
         // Ignore errors in dev mode
       });
 
-    // Listen for status changes
     const unsubscribe = window.electron.update.onStatusChanged((newStatus) => {
       setStatus((prevStatus) => {
-        // Reset dismissed state when a new update becomes available
         if (newStatus.updateAvailable && !prevStatus?.updateAvailable) {
           setIsDismissed(false);
         }
@@ -36,7 +36,6 @@ export default function UpdateNotification() {
     };
   }, []);
 
-  // Don't show if dismissed, no update available, or error
   if (isDismissed || !status || !status.updateAvailable || status.error || status.readyToInstall) {
     return null;
   }
@@ -57,33 +56,33 @@ export default function UpdateNotification() {
 
   return (
     <div className="pointer-events-none fixed top-14 right-0 left-0 z-40 flex justify-center px-4 [-webkit-app-region:no-drag]">
-      <div className="pointer-events-auto flex w-full max-w-3xl items-center gap-2.5 rounded-2xl border border-blue-200/70 bg-white/90 px-3 py-2.5 shadow-lg shadow-blue-200/60 backdrop-blur-md dark:border-blue-900/50 dark:bg-blue-950/70 dark:shadow-black/30">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-900/60 dark:text-blue-200">
+      <div className="pointer-events-auto flex w-full max-w-3xl items-center gap-2.5 rounded-2xl border border-[var(--info)]/30 bg-[var(--bg-surface)]/95 px-3 py-2.5 shadow-lg shadow-black/30 backdrop-blur-md">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--info)]/15 text-[var(--info)]">
           <RefreshCw className="h-3.5 w-3.5" />
         </span>
         <div className="flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-              Update available: {status.updateInfo?.version}
+            <p className="text-sm font-semibold text-[var(--text-primary)]">
+              {t('update.available')} {status.updateInfo?.version}
             </p>
             <button
               onClick={handleViewReleaseNotes}
-              className="flex items-center gap-1 text-xs text-blue-600 transition-colors hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+              className="flex items-center gap-1 text-xs text-[var(--info)] transition-colors hover:text-[var(--text-primary)]"
             >
-              What&apos;s new
+              {t('update.whatsNew')}
               <ExternalLink className="h-3 w-3" />
             </button>
           </div>
           {status.downloading && (
             <div className="space-y-1">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-blue-200/70 dark:bg-blue-900/40">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--info)]/20">
                 <div
-                  className="h-full rounded-full bg-blue-600 transition-all duration-300 dark:bg-blue-400"
+                  className="h-full rounded-full bg-[var(--info)] transition-all duration-300"
                   style={{ width: `${status.downloadProgress}%` }}
                 />
               </div>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                Downloading… {Math.round(status.downloadProgress)}%
+              <p className="text-xs text-[var(--text-muted)]">
+                {t('update.downloading')} {Math.round(status.downloadProgress)}%
               </p>
             </div>
           )}
@@ -92,16 +91,16 @@ export default function UpdateNotification() {
           {!status.downloading && (
             <button
               onClick={handleDownload}
-              className="flex items-center gap-1.5 rounded-full bg-blue-700 px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:bg-blue-800 dark:bg-blue-500 dark:hover:bg-blue-400"
+              className="flex items-center gap-1.5 rounded-full bg-[var(--info)] px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase transition-colors hover:brightness-110 focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
             >
               <Download className="h-3.5 w-3.5" />
-              Download
+              {t('update.download')}
             </button>
           )}
           <button
             onClick={handleDismiss}
-            className="rounded-full border border-blue-200/70 p-1.5 text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/40"
-            aria-label="Dismiss"
+            className="rounded-full border border-[var(--border-subtle)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] focus:ring-2 focus:ring-[var(--accent)]/40 focus:outline-none"
+            aria-label={t('update.dismiss')}
           >
             <X className="h-4 w-4" />
           </button>

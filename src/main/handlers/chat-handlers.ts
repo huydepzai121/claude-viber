@@ -17,6 +17,7 @@ import {
   isSessionActive,
   resetSession,
   setChatModelPreference,
+  setModelDirect,
   startStreamingSession
 } from '../lib/claude-session';
 import { getApiKey, getWorkspaceDir } from '../lib/config';
@@ -46,21 +47,37 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
 
       const userMessage = buildUserMessage(text, savedAttachments);
 
+      console.log('[chat:send-message] Message built, sessionActive:', isSessionActive());
+
       // Start streaming session if not already running
       if (!isSessionActive()) {
+        console.log('[chat:send-message] Starting new streaming session...');
         startStreamingSession(getMainWindow()).catch((error) => {
-          console.error('Failed to start streaming session:', error);
+          console.error('[chat:send-message] Failed to start streaming session:', error);
         });
       }
 
-      // Queue the message
-      await new Promise<void>((resolve) => {
-        messageQueue.push({ message: userMessage, resolve });
+      // Queue the message with timeout to prevent infinite hang
+      console.log('[chat:send-message] Pushing message to queue...');
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          console.error('[chat:send-message] Message queue timeout after 30s');
+          reject(new Error('Message was not consumed by the session within 30 seconds. The AI session may have failed to start.'));
+        }, 30_000);
+
+        messageQueue.push({
+          message: userMessage,
+          resolve: () => {
+            clearTimeout(timeout);
+            console.log('[chat:send-message] Message consumed by session');
+            resolve();
+          }
+        });
       });
 
       return { success: true, attachments: savedAttachments };
     } catch (error) {
-      console.error('Error queueing message:', error);
+      console.error('[chat:send-message] Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return { success: false, error: errorMessage };
     }
@@ -92,6 +109,20 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
     }
   });
 
+  // Start session eagerly (for slash commands, model info, etc.)
+  ipcMain.handle('chat:start-session', async () => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      return { success: false, error: 'No API key configured' };
+    }
+    if (!isSessionActive()) {
+      startStreamingSession(getMainWindow()).catch((error) => {
+        console.error('Failed to start session:', error);
+      });
+    }
+    return { success: true };
+  });
+
   ipcMain.handle('chat:get-model-preference', async () => {
     return {
       preference: getCurrentModelPreference()
@@ -106,6 +137,17 @@ export function registerChatHandlers(getMainWindow: () => BrowserWindow | null):
       console.error('Error updating model preference:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       return { success: false, error: errorMessage, preference: getCurrentModelPreference() };
+    }
+  });
+
+  ipcMain.handle('chat:set-model-direct', async (_event, modelId: string) => {
+    try {
+      await setModelDirect(modelId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting model:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      return { success: false, error: errorMessage };
     }
   });
 }

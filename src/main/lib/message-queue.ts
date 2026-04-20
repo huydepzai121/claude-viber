@@ -55,21 +55,21 @@ export function getSessionId(): string {
 
 // Async generator for streaming input mode
 export async function* messageGenerator(): AsyncGenerator<SDKUserMessage> {
+  console.log('[queue] messageGenerator started');
   while (true) {
     // Check if generator should abort
     if (shouldAbort) {
+      console.log('[queue] Generator aborted');
       return;
     }
 
     // Wait for a message to be queued
     await new Promise<void>((resolve) => {
       const checkQueue = () => {
-        // Check abort flag while waiting
         if (shouldAbort) {
           resolve();
           return;
         }
-
         if (messageQueue.length > 0) {
           resolve();
         } else {
@@ -81,12 +81,14 @@ export async function* messageGenerator(): AsyncGenerator<SDKUserMessage> {
 
     // Check abort flag again after waiting
     if (shouldAbort) {
+      console.log('[queue] Generator aborted after wait');
       return;
     }
 
     // Get the next message from the queue
     const item = messageQueue.shift();
     if (item) {
+      console.log('[queue] Yielding message to SDK, session:', getSessionId());
       yield {
         type: 'user',
         message: item.message,
@@ -94,6 +96,7 @@ export async function* messageGenerator(): AsyncGenerator<SDKUserMessage> {
         session_id: getSessionId()
       };
       item.resolve();
+      console.log('[queue] Message yielded and resolved');
     }
   }
 }

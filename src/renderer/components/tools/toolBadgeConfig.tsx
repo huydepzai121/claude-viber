@@ -29,7 +29,7 @@ export interface ToolBadgeConfig {
   };
 }
 
-// Unified tool badge configuration - single source of truth
+// Unified tool badge configuration - dark purple theme only
 export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
   switch (toolName) {
     // File operations - Green/Emerald
@@ -37,36 +37,36 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <FileText className="size-2.5" />,
         colors: {
-          border: 'border-emerald-200/60 dark:border-emerald-500/30',
-          bg: 'bg-emerald-50/80 dark:bg-emerald-500/10',
-          text: 'text-emerald-600 dark:text-emerald-400',
-          hoverBg: 'hover:bg-emerald-100/80 dark:hover:bg-emerald-500/20',
-          chevron: 'text-emerald-400 dark:text-emerald-500',
-          iconColor: 'text-emerald-500 dark:text-emerald-400'
+          border: 'border-emerald-500/25',
+          bg: 'bg-emerald-500/10',
+          text: 'text-emerald-400',
+          hoverBg: 'hover:bg-emerald-500/20',
+          chevron: 'text-emerald-500',
+          iconColor: 'text-emerald-400'
         }
       };
     case 'Write':
       return {
         icon: <FilePen className="size-2.5" />,
         colors: {
-          border: 'border-emerald-200/60 dark:border-emerald-500/30',
-          bg: 'bg-emerald-50/80 dark:bg-emerald-500/10',
-          text: 'text-emerald-600 dark:text-emerald-400',
-          hoverBg: 'hover:bg-emerald-100/80 dark:hover:bg-emerald-500/20',
-          chevron: 'text-emerald-400 dark:text-emerald-500',
-          iconColor: 'text-emerald-500 dark:text-emerald-400'
+          border: 'border-emerald-500/25',
+          bg: 'bg-emerald-500/10',
+          text: 'text-emerald-400',
+          hoverBg: 'hover:bg-emerald-500/20',
+          chevron: 'text-emerald-500',
+          iconColor: 'text-emerald-400'
         }
       };
     case 'Edit':
       return {
         icon: <FileEdit className="size-2.5" />,
         colors: {
-          border: 'border-emerald-200/60 dark:border-emerald-500/30',
-          bg: 'bg-emerald-50/80 dark:bg-emerald-500/10',
-          text: 'text-emerald-600 dark:text-emerald-400',
-          hoverBg: 'hover:bg-emerald-100/80 dark:hover:bg-emerald-500/20',
-          chevron: 'text-emerald-400 dark:text-emerald-500',
-          iconColor: 'text-emerald-500 dark:text-emerald-400'
+          border: 'border-emerald-500/25',
+          bg: 'bg-emerald-500/10',
+          text: 'text-emerald-400',
+          hoverBg: 'hover:bg-emerald-500/20',
+          chevron: 'text-emerald-500',
+          iconColor: 'text-emerald-400'
         }
       };
     // Terminal/Shell operations - Orange/Amber
@@ -75,61 +75,61 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <Terminal className="size-2.5" />,
         colors: {
-          border: 'border-amber-200/60 dark:border-amber-500/30',
-          bg: 'bg-amber-50/80 dark:bg-amber-500/10',
-          text: 'text-amber-600 dark:text-amber-400',
-          hoverBg: 'hover:bg-amber-100/80 dark:hover:bg-amber-500/20',
-          chevron: 'text-amber-400 dark:text-amber-500',
-          iconColor: 'text-amber-500 dark:text-amber-400'
+          border: 'border-amber-500/25',
+          bg: 'bg-amber-500/10',
+          text: 'text-amber-400',
+          hoverBg: 'hover:bg-amber-500/20',
+          chevron: 'text-amber-500',
+          iconColor: 'text-amber-400'
         }
       };
     case 'KillShell':
       return {
         icon: <XCircle className="size-2.5" />,
         colors: {
-          border: 'border-amber-200/60 dark:border-amber-500/30',
-          bg: 'bg-amber-50/80 dark:bg-amber-500/10',
-          text: 'text-amber-600 dark:text-amber-400',
-          hoverBg: 'hover:bg-amber-100/80 dark:hover:bg-amber-500/20',
-          chevron: 'text-amber-400 dark:text-amber-500',
-          iconColor: 'text-amber-500 dark:text-amber-400'
+          border: 'border-amber-500/25',
+          bg: 'bg-amber-500/10',
+          text: 'text-amber-400',
+          hoverBg: 'hover:bg-amber-500/20',
+          chevron: 'text-amber-500',
+          iconColor: 'text-amber-400'
         }
       };
-    // Search operations - Purple/Violet
+    // Search operations - Purple/Violet (lighter shade to stand out on purple bg)
     case 'Grep':
       return {
         icon: <SearchCode className="size-2.5" />,
         colors: {
-          border: 'border-violet-200/60 dark:border-violet-500/30',
-          bg: 'bg-violet-50/80 dark:bg-violet-500/10',
-          text: 'text-violet-600 dark:text-violet-400',
-          hoverBg: 'hover:bg-violet-100/80 dark:hover:bg-violet-500/20',
-          chevron: 'text-violet-400 dark:text-violet-500',
-          iconColor: 'text-violet-500 dark:text-violet-400'
+          border: 'border-violet-400/25',
+          bg: 'bg-violet-400/10',
+          text: 'text-violet-300',
+          hoverBg: 'hover:bg-violet-400/20',
+          chevron: 'text-violet-400',
+          iconColor: 'text-violet-300'
         }
       };
     case 'Glob':
       return {
         icon: <Search className="size-2.5" />,
         colors: {
-          border: 'border-violet-200/60 dark:border-violet-500/30',
-          bg: 'bg-violet-50/80 dark:bg-violet-500/10',
-          text: 'text-violet-600 dark:text-violet-400',
-          hoverBg: 'hover:bg-violet-100/80 dark:hover:bg-violet-500/20',
-          chevron: 'text-violet-400 dark:text-violet-500',
-          iconColor: 'text-violet-500 dark:text-violet-400'
+          border: 'border-violet-400/25',
+          bg: 'bg-violet-400/10',
+          text: 'text-violet-300',
+          hoverBg: 'hover:bg-violet-400/20',
+          chevron: 'text-violet-400',
+          iconColor: 'text-violet-300'
         }
       };
     case 'WebSearch':
       return {
         icon: <Search className="size-2.5" />,
         colors: {
-          border: 'border-violet-200/60 dark:border-violet-500/30',
-          bg: 'bg-violet-50/80 dark:bg-violet-500/10',
-          text: 'text-violet-600 dark:text-violet-400',
-          hoverBg: 'hover:bg-violet-100/80 dark:hover:bg-violet-500/20',
-          chevron: 'text-violet-400 dark:text-violet-500',
-          iconColor: 'text-violet-500 dark:text-violet-400'
+          border: 'border-violet-400/25',
+          bg: 'bg-violet-400/10',
+          text: 'text-violet-300',
+          hoverBg: 'hover:bg-violet-400/20',
+          chevron: 'text-violet-400',
+          iconColor: 'text-violet-300'
         }
       };
     // Web operations - Blue/Cyan
@@ -137,12 +137,12 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <Globe className="size-2.5" />,
         colors: {
-          border: 'border-cyan-200/60 dark:border-cyan-500/30',
-          bg: 'bg-cyan-50/80 dark:bg-cyan-500/10',
-          text: 'text-cyan-600 dark:text-cyan-400',
-          hoverBg: 'hover:bg-cyan-100/80 dark:hover:bg-cyan-500/20',
-          chevron: 'text-cyan-400 dark:text-cyan-500',
-          iconColor: 'text-cyan-500 dark:text-cyan-400'
+          border: 'border-cyan-500/25',
+          bg: 'bg-cyan-500/10',
+          text: 'text-cyan-400',
+          hoverBg: 'hover:bg-cyan-500/20',
+          chevron: 'text-cyan-500',
+          iconColor: 'text-cyan-400'
         }
       };
     // Task management - Indigo
@@ -150,24 +150,24 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <Zap className="size-2.5" />,
         colors: {
-          border: 'border-indigo-200/60 dark:border-indigo-500/30',
-          bg: 'bg-indigo-50/80 dark:bg-indigo-500/10',
-          text: 'text-indigo-600 dark:text-indigo-400',
-          hoverBg: 'hover:bg-indigo-100/80 dark:hover:bg-indigo-500/20',
-          chevron: 'text-indigo-400 dark:text-indigo-500',
-          iconColor: 'text-indigo-500 dark:text-indigo-400'
+          border: 'border-indigo-500/25',
+          bg: 'bg-indigo-500/10',
+          text: 'text-indigo-400',
+          hoverBg: 'hover:bg-indigo-500/20',
+          chevron: 'text-indigo-500',
+          iconColor: 'text-indigo-400'
         }
       };
     case 'TodoWrite':
       return {
         icon: <ListTodo className="size-2.5" />,
         colors: {
-          border: 'border-indigo-200/60 dark:border-indigo-500/30',
-          bg: 'bg-indigo-50/80 dark:bg-indigo-500/10',
-          text: 'text-indigo-600 dark:text-indigo-400',
-          hoverBg: 'hover:bg-indigo-100/80 dark:hover:bg-indigo-500/20',
-          chevron: 'text-indigo-400 dark:text-indigo-500',
-          iconColor: 'text-indigo-500 dark:text-indigo-400'
+          border: 'border-indigo-500/25',
+          bg: 'bg-indigo-500/10',
+          text: 'text-indigo-400',
+          hoverBg: 'hover:bg-indigo-500/20',
+          chevron: 'text-indigo-500',
+          iconColor: 'text-indigo-400'
         }
       };
     // Skills - Pink/Rose
@@ -175,12 +175,12 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <Sparkles className="size-2.5" />,
         colors: {
-          border: 'border-rose-200/60 dark:border-rose-500/30',
-          bg: 'bg-rose-50/80 dark:bg-rose-500/10',
-          text: 'text-rose-600 dark:text-rose-400',
-          hoverBg: 'hover:bg-rose-100/80 dark:hover:bg-rose-500/20',
-          chevron: 'text-rose-400 dark:text-rose-500',
-          iconColor: 'text-rose-500 dark:text-rose-400'
+          border: 'border-rose-500/25',
+          bg: 'bg-rose-500/10',
+          text: 'text-rose-400',
+          hoverBg: 'hover:bg-rose-500/20',
+          chevron: 'text-rose-500',
+          iconColor: 'text-rose-400'
         }
       };
     // Notebook - Teal
@@ -188,12 +188,25 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: <BookOpen className="size-2.5" />,
         colors: {
-          border: 'border-teal-200/60 dark:border-teal-500/30',
-          bg: 'bg-teal-50/80 dark:bg-teal-500/10',
-          text: 'text-teal-600 dark:text-teal-400',
-          hoverBg: 'hover:bg-teal-100/80 dark:hover:bg-teal-500/20',
-          chevron: 'text-teal-400 dark:text-teal-500',
-          iconColor: 'text-teal-500 dark:text-teal-400'
+          border: 'border-teal-500/25',
+          bg: 'bg-teal-500/10',
+          text: 'text-teal-400',
+          hoverBg: 'hover:bg-teal-500/20',
+          chevron: 'text-teal-500',
+          iconColor: 'text-teal-400'
+        }
+      };
+    // User question - Amber/Orange
+    case 'AskUserQuestion':
+      return {
+        icon: <Sparkles className="size-2.5" />,
+        colors: {
+          border: 'border-amber-500/25',
+          bg: 'bg-amber-500/10',
+          text: 'text-amber-400',
+          hoverBg: 'hover:bg-amber-500/20',
+          chevron: 'text-amber-500',
+          iconColor: 'text-amber-400'
         }
       };
     // Default - Blue (fallback)
@@ -201,12 +214,12 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
       return {
         icon: null,
         colors: {
-          border: 'border-blue-200/60 dark:border-blue-500/30',
-          bg: 'bg-blue-50/80 dark:bg-blue-500/10',
-          text: 'text-blue-600 dark:text-blue-400',
-          hoverBg: 'hover:bg-blue-100/80 dark:hover:bg-blue-500/20',
-          chevron: 'text-blue-400 dark:text-blue-500',
-          iconColor: 'text-blue-500 dark:text-blue-400'
+          border: 'border-blue-500/25',
+          bg: 'bg-blue-500/10',
+          text: 'text-blue-400',
+          hoverBg: 'hover:bg-blue-500/20',
+          chevron: 'text-blue-500',
+          iconColor: 'text-blue-400'
         }
       };
   }
@@ -215,7 +228,6 @@ export function getToolBadgeConfig(toolName: string): ToolBadgeConfig {
 // Unified label generation logic - extracts compact label from tool
 export function getToolLabel(tool: ToolUseSimple): string {
   if (!tool.parsedInput) {
-    // Try to parse from inputJson if available
     if (tool.inputJson) {
       try {
         const parsed = JSON.parse(tool.inputJson);
@@ -227,30 +239,14 @@ export function getToolLabel(tool: ToolUseSimple): string {
               parsed.description || parsed.command.split(' ')[0]
             : 'Run command';
         }
-        if (tool.name === 'BashOutput') {
-          return 'Bash Output';
-        }
-        if (tool.name === 'Skill') {
-          return parsed.skill ? `Skill(${parsed.skill})` : 'Skill';
-        }
-        if (tool.name === 'Glob') {
-          return 'Find';
-        }
-        if (tool.name === 'Grep') {
-          return 'Search';
-        }
-        if (tool.name === 'WebSearch') {
-          return 'Search';
-        }
-        if (tool.name === 'WebFetch') {
-          return 'Fetch';
-        }
-        if (tool.name === 'TodoWrite') {
-          return 'Todo List';
-        }
-        if (tool.name === 'KillShell') {
-          return 'Kill Shell';
-        }
+        if (tool.name === 'BashOutput') return 'Bash Output';
+        if (tool.name === 'Skill') return parsed.skill ? `Skill(${parsed.skill})` : 'Skill';
+        if (tool.name === 'Glob') return 'Find';
+        if (tool.name === 'Grep') return 'Search';
+        if (tool.name === 'WebSearch') return 'Search';
+        if (tool.name === 'WebFetch') return 'Fetch';
+        if (tool.name === 'TodoWrite') return 'Todo List';
+        if (tool.name === 'KillShell') return 'Kill Shell';
       } catch {
         // Ignore parse errors
       }
@@ -278,9 +274,8 @@ export function getToolLabel(tool: ToolUseSimple): string {
       }
       return 'Run command';
     }
-    case 'BashOutput': {
+    case 'BashOutput':
       return 'Bash Output';
-    }
     case 'Grep': {
       const input = tool.parsedInput as { pattern?: string };
       if (input.pattern) {
@@ -337,9 +332,7 @@ export function getToolLabel(tool: ToolUseSimple): string {
     }
     case 'Skill': {
       const input = tool.parsedInput as { skill?: string };
-      if (input.skill) {
-        return `Skill(${input.skill})`;
-      }
+      if (input.skill) return `Skill(${input.skill})`;
       return 'Skill';
     }
     default:
@@ -347,8 +340,6 @@ export function getToolLabel(tool: ToolUseSimple): string {
   }
 }
 
-// Unified expanded label generation logic - for ToolHeader in expanded state
-// Returns the base semantic label (without pattern/file details) to match collapsed badge
 export function getToolExpandedLabel(tool: ToolUseSimple): string {
   switch (tool.name) {
     case 'Glob':
@@ -386,41 +377,37 @@ export function getToolExpandedLabel(tool: ToolUseSimple): string {
     }
     case 'KillShell':
       return 'Kill Shell';
+    case 'AskUserQuestion':
+      return 'Question';
     default:
       return tool.name;
   }
 }
 
-// Thinking badge configuration - single source of truth
+// Thinking badge configuration - purple theme
 export function getThinkingBadgeConfig(): ToolBadgeConfig {
   return {
     icon: <Brain className="size-2.5" />,
     colors: {
-      border: 'border-purple-200/60 dark:border-purple-500/30',
-      bg: 'bg-purple-50/80 dark:bg-purple-500/10',
-      text: 'text-purple-600 dark:text-purple-400',
-      hoverBg: 'hover:bg-purple-100/80 dark:hover:bg-purple-500/20',
-      chevron: 'text-purple-400 dark:text-purple-500',
-      iconColor: 'text-purple-500 dark:text-purple-400'
+      border: 'border-purple-400/25',
+      bg: 'bg-purple-400/10',
+      text: 'text-purple-300',
+      hoverBg: 'hover:bg-purple-400/20',
+      chevron: 'text-purple-400',
+      iconColor: 'text-purple-300'
     }
   };
 }
 
-// Unified thinking label generation logic
 export function getThinkingLabel(isComplete: boolean, durationMs?: number): string {
   const durationSeconds =
     typeof durationMs === 'number' ? Math.max(1, Math.round(durationMs / 1000)) : null;
 
-  if (isComplete && durationSeconds) {
-    return `${durationSeconds}s`;
-  }
-  if (isComplete) {
-    return 'Thought';
-  }
+  if (isComplete && durationSeconds) return `${durationSeconds}s`;
+  if (isComplete) return 'Thought';
   return 'Thinking';
 }
 
-// Get expanded thinking label (more descriptive)
 export function getThinkingExpandedLabel(isComplete: boolean, durationMs?: number): string {
   const durationSeconds =
     typeof durationMs === 'number' ? Math.max(1, Math.round(durationMs / 1000)) : null;
@@ -429,8 +416,6 @@ export function getThinkingExpandedLabel(isComplete: boolean, durationMs?: numbe
     const seconds = Math.round(durationMs! / 1000);
     return `Thought for ${seconds} second${seconds === 1 ? '' : 's'}`;
   }
-  if (isComplete) {
-    return 'Thought';
-  }
+  if (isComplete) return 'Thought';
   return 'Thinking';
 }

@@ -23,14 +23,14 @@ export default function GrepTool({ tool }: GrepToolProps) {
       <ToolHeader tool={tool} toolName={tool.name} />
       <InlineCode>{input.pattern}</InlineCode>
       {input.path && (
-        <span className="text-[10px] text-neutral-500 dark:text-neutral-500">in {input.path}</span>
+        <span className="text-[10px] text-[var(--text-disabled)]">in {input.path}</span>
       )}
     </div>
   );
 
   const expandedContent =
     tool.result ?
-      <pre className="overflow-x-auto rounded bg-neutral-100/50 px-2 py-1 font-mono text-sm wrap-break-word whitespace-pre-wrap text-neutral-600 dark:bg-neutral-950/50 dark:text-neutral-300">
+      <pre className="overflow-x-auto rounded bg-[var(--bg-elevated)]/50 px-2 py-1 font-mono text-sm wrap-break-word whitespace-pre-wrap text-[var(--text-secondary)]">
         {tool.result}
       </pre>
     : null;

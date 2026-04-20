@@ -23,7 +23,7 @@ export default function EditTool({ tool }: EditToolProps) {
       <ToolHeader tool={tool} toolName={tool.name} />
       <FilePath path={input.file_path} />
       {input.replace_all && (
-        <span className="rounded border border-orange-200/50 bg-orange-50/50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300">
+        <span className="rounded border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-medium text-orange-300">
           replace all
         </span>
       )}
@@ -32,11 +32,11 @@ export default function EditTool({ tool }: EditToolProps) {
 
   const expandedContent = (
     <div className="space-y-1.5">
-      <pre className="overflow-x-auto rounded bg-red-100/50 px-2 py-1 font-mono text-sm break-words whitespace-pre-wrap text-red-700 dark:bg-red-950/50 dark:text-red-300">
+      <pre className="overflow-x-auto rounded bg-red-950/50 px-2 py-1 font-mono text-sm break-words whitespace-pre-wrap text-red-300">
         {input.old_string || ''}
       </pre>
 
-      <pre className="overflow-x-auto rounded bg-green-100/50 px-2 py-1 font-mono text-sm break-words whitespace-pre-wrap text-green-700 dark:bg-green-950/50 dark:text-green-300">
+      <pre className="overflow-x-auto rounded bg-green-950/50 px-2 py-1 font-mono text-sm break-words whitespace-pre-wrap text-green-300">
         {input.new_string || ''}
       </pre>
     </div>

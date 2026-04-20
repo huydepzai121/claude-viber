@@ -1,9 +1,14 @@
 import type {
   ChatModelPreference,
+  FileInfo,
   GetChatModelPreferenceResponse,
+  ModelInfo,
   SendMessagePayload,
   SendMessageResponse,
-  SetChatModelPreferenceResponse
+  SessionInitData,
+  SetChatModelPreferenceResponse,
+  SkillInfo,
+  SlashCommand
 } from '../shared/types/ipc';
 
 export type ChatResponse = SendMessageResponse;
@@ -152,6 +157,7 @@ export interface ElectronAPI {
   chat: {
     sendMessage: (payload: SendMessagePayload) => Promise<ChatResponse>;
     stopMessage: () => Promise<{ success: boolean; error?: string }>;
+    startSession: () => Promise<{ success: boolean; error?: string }>;
     resetSession: (
       resumeSessionId?: string | null
     ) => Promise<{ success: boolean; error?: string }>;
@@ -175,6 +181,12 @@ export interface ElectronAPI {
     onSessionUpdated: (
       callback: (data: { sessionId: string; resumed: boolean }) => void
     ) => () => void;
+    onSessionInit: (callback: (data: SessionInitData) => void) => () => void;
+    onSlashCommands: (callback: (commands: SlashCommand[]) => void) => () => void;
+    onSupportedModels: (callback: (models: ModelInfo[]) => void) => () => void;
+    setModelDirect: (modelId: string) => Promise<{ success: boolean; error?: string }>;
+    onAskUserQuestion: (callback: (data: { questions: unknown[] }) => void) => () => void;
+    answerUserQuestion: (answers: Record<string, string[]>) => Promise<unknown>;
   };
   config: {
     getWorkspaceDir: () => Promise<WorkspaceResponse>;
@@ -191,9 +203,44 @@ export interface ElectronAPI {
       success: boolean;
       status: { configured: boolean; source: 'env' | 'local' | null; lastFour: string | null };
     }>;
+    getApiBaseUrl: () => Promise<{ apiBaseUrl: string | null }>;
+    setApiBaseUrl: (apiBaseUrl?: string | null) => Promise<{ success: boolean }>;
+    getMcpServers: () => Promise<{ mcpServers: Record<string, unknown> }>;
+    setMcpServers: (mcpServers: Record<string, unknown>) => Promise<{ success: boolean }>;
+    getClaudeCommands: () => Promise<{
+      commands: { name: string; description: string; argumentHint: string }[];
+    }>;
+    browseFolder: () => Promise<{ canceled: boolean; folder: string | null }>;
+    getRecentFolders: () => Promise<{ folders: string[] }>;
+    addRecentFolder: (folder: string) => Promise<{ success: boolean }>;
+    getUserProfile: () => Promise<{ profile: { name: string; plan: string } }>;
+    setUserProfile: (profile: { name: string; plan: string }) => Promise<{ success: boolean }>;
+    getOnboardingState: () => Promise<{ dismissed: boolean; completed: Record<string, boolean> }>;
+    setOnboardingDismissed: (dismissed: boolean) => Promise<{ success: boolean }>;
+    setOnboardingTaskCompleted: (
+      taskId: string,
+      completed: boolean
+    ) => Promise<{ success: boolean }>;
+    getSidebarCollapsed: () => Promise<{ collapsed: boolean }>;
+    setSidebarCollapsed: (collapsed: boolean) => Promise<{ success: boolean }>;
+    getSkills: () => Promise<{ skills: SkillInfo[] }>;
+    onWorkspaceChanged: (callback: (data: { workspaceDir: string }) => void) => () => void;
+  };
+  file: {
+    readText: (filePath: string) => Promise<{ content: string | null; error: string | null }>;
+    readBinaryBase64: (
+      filePath: string
+    ) => Promise<{ data: string | null; mimeType: string | null; error: string | null }>;
+    getInfo: (filePath: string) => Promise<FileInfo>;
+    openInDefaultApp: (filePath: string) => Promise<{ success: boolean; error: string | null }>;
+    convertToImages: (filePath: string) => Promise<{
+      pages: { data: string; mimeType: string }[];
+      error: string | null;
+    }>;
   };
   shell: {
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+    openFolder: (folderPath: string) => Promise<{ success: boolean; error?: string }>;
   };
   conversation: {
     list: () => Promise<ConversationListResponse>;

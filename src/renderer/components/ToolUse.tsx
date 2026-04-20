@@ -1,5 +1,6 @@
 import type { ToolUseSimple } from '@/types/chat';
 
+import AskUserQuestionTool from './tools/AskUserQuestionTool';
 import BashOutputTool from './tools/BashOutputTool';
 import BashTool from './tools/BashTool';
 import { CollapsibleTool } from './tools/CollapsibleTool';
@@ -23,6 +24,8 @@ interface ToolUseProps {
 export default function ToolUse({ tool }: ToolUseProps) {
   // Route to tool-specific component based on tool name
   switch (tool.name) {
+    case 'AskUserQuestion':
+      return <AskUserQuestionTool tool={tool} />;
     case 'Bash':
       return <BashTool tool={tool} />;
     case 'BashOutput':
@@ -54,7 +57,7 @@ export default function ToolUse({ tool }: ToolUseProps) {
     default: {
       // Fallback for unknown tools - show raw JSON
       const collapsedContent = (
-        <div className="text-sm text-neutral-600 dark:text-neutral-400">
+        <div className="text-sm text-[var(--text-muted)]">
           <span className="font-medium">{tool.name}</span>
         </div>
       );
@@ -62,7 +65,7 @@ export default function ToolUse({ tool }: ToolUseProps) {
       const expandedContent =
         tool.inputJson ?
           <div className="ml-5">
-            <pre className="overflow-x-auto rounded bg-neutral-50 px-2 py-1.5 font-mono text-sm wrap-break-word whitespace-pre-wrap text-neutral-700 dark:bg-neutral-900/50 dark:text-neutral-300">
+            <pre className="overflow-x-auto rounded bg-[var(--bg-surface)] px-2 py-1.5 font-mono text-sm wrap-break-word whitespace-pre-wrap text-[var(--text-secondary)]">
               {tool.inputJson}
             </pre>
           </div>

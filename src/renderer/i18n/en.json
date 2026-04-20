@@ -1,0 +1,222 @@
+{
+  "titleBar": {
+    "chats": "Chats",
+    "openChatHistory": "Open chat history",
+    "startNewChat": "Start new chat",
+    "switchToVietnamese": "Switch language to Vietnamese",
+    "switchToEnglish": "Switch language to English",
+    "openSettings": "Open settings"
+  },
+  "chat": {
+    "placeholder": "How can I help you today?",
+    "streaming": "Streaming response...",
+    "emptyStateLabel": "Viber.vn Cowork",
+    "send": "Send message",
+    "stopStreaming": "Stop response"
+  },
+  "chatHistory": {
+    "title": "Resume a thread",
+    "subtitle": "Pick up where you left off or start fresh",
+    "newChat": "Start new chat",
+    "loading": "Loading...",
+    "noConversations": "No conversations yet",
+    "noConversationsHint": "Start a new chat to see it here",
+    "defaultPreview": "Tap to resume this conversation from where you left off.",
+    "deleteConfirm": "Are you sure you want to delete this conversation?",
+    "closeDrawer": "Close drawer",
+    "deleteConversation": "Delete conversation"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure API access and workspace directory for Claude Agent Desktop.",
+    "back": "Back",
+    "loading": "Loading settings...",
+    "apiKey": {
+      "title": "Anthropic API Key",
+      "description": "Set an API key locally or use the ANTHROPIC_API_KEY environment variable.",
+      "usingEnvKey": "Using environment key",
+      "storedLocally": "Stored locally",
+      "noKeyConfigured": "No key configured",
+      "envOverride": "Env override",
+      "placeholder": "sk-ant-...",
+      "clearStoredKey": "Clear stored key",
+      "save": "Save API Key",
+      "saving": "Saving...",
+      "saved": "API key saved",
+      "saveFailed": "Failed to save key"
+    },
+    "apiBaseUrl": {
+      "title": "API Base URL",
+      "description": "Custom API endpoint for third-party proxies (e.g., OpenRouter). Leave empty to use the default Anthropic API.",
+      "placeholder": "https://openrouter.ai/api/v1",
+      "save": "Save",
+      "saving": "Saving...",
+      "saved": "Base URL saved",
+      "saveFailed": "Failed to save URL",
+      "clear": "Clear"
+    },
+    "language": {
+      "title": "Language",
+      "description": "Choose your preferred display language.",
+      "english": "English",
+      "vietnamese": "Tiếng Việt"
+    },
+    "workspace": {
+      "title": "Workspace Directory",
+      "description": "Directory where files are read and written. Default: Desktop/claude-agent.",
+      "save": "Save",
+      "saving": "Saving...",
+      "openFolder": "Open Folder",
+      "success": "Workspace directory updated successfully",
+      "error": "Failed to update workspace directory"
+    },
+    "mcp": {
+      "title": "MCP Servers",
+      "description": "Manage Model Context Protocol servers. Changes are saved to ~/.claude/settings.json.",
+      "noServers": "No MCP servers configured. Add one below.",
+      "addTitle": "Add MCP Server (stdio)",
+      "namePlaceholder": "Server name",
+      "commandPlaceholder": "Command (e.g., npx)",
+      "argsPlaceholder": "Args (space-separated)",
+      "add": "Add Server",
+      "remove": "Remove server"
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "description": "Enable debug output from Claude Code process. Messages appear inline with chat responses.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enabledHint": "Verbose tool output will stream with responses.",
+      "disabledHint": "Keep chat replies cleaner by hiding debug events.",
+      "debugInfo": "Developer / Debug Info",
+      "appInfo": "App Information",
+      "appVersion": "App Version",
+      "electronVersion": "Electron Version",
+      "chromiumVersion": "Chromium Version",
+      "v8Version": "V8 Version",
+      "nodeVersion": "Node.js Version",
+      "sdkVersion": "Claude Agent SDK Version",
+      "platform": "Platform",
+      "osType": "OS Type",
+      "osRelease": "OS Release",
+      "loadingInfo": "Loading...",
+      "failedInfo": "Failed to load diagnostic information",
+      "pathEnvVar": "PATH Environment Variable",
+      "pathPlatform": "Platform",
+      "pathEntries": "Entries",
+      "pathSeparator": "Separator",
+      "pathSepWindows": "; (Windows)",
+      "pathSepUnix": ": (Unix)",
+      "failedPath": "Failed to load PATH info",
+      "allEnvVars": "All Environment Variables",
+      "totalVars": "Total",
+      "variables": "variables",
+      "failedEnvVars": "Failed to load environment variables"
+    }
+  },
+  "update": {
+    "available": "Update available:",
+    "whatsNew": "What's new",
+    "downloading": "Downloading…",
+    "download": "Download",
+    "dismiss": "Dismiss",
+    "ready": "Update ready:",
+    "restartHint": "Restart Claude Agent Desktop to finish installing.",
+    "restartInstall": "Restart & Install",
+    "checking": "Checking for updates…",
+    "upToDate": "You're up to date. No updates available."
+  },
+  "attachments": {
+    "attach": "Attach files",
+    "remove": "Remove",
+    "tooLarge": "\"{fileName}\" is larger than {maxMb} MB. Please drop it directly into the Claude Agent workspace at {workspace}.",
+    "workspaceFallback": "the configured claude-agent workspace directory"
+  },
+  "model": {
+    "fast": "Fast",
+    "smart": "Smart",
+    "sonnet": "Sonnet",
+    "opus": "Opus",
+    "select": "Select model",
+    "loading": "Loading models…"
+  },
+  "sessionInfo": {
+    "tools": "{count} tools",
+    "mcpServers": "{connected}/{total} MCP",
+    "skills": "{count} skills",
+    "toolsLabel": "Tools",
+    "mcpLabel": "MCP Servers",
+    "skillsLabel": "Skills",
+    "pluginsLabel": "Plugins"
+  },
+  "sidebar": {
+    "newTask": "New task",
+    "search": "Search",
+    "ideas": "Ideas",
+    "settings": "Settings",
+    "getToKnow": "Get to know Cowork",
+    "recents": "Recents",
+    "noSessions": "No sessions yet",
+    "updatedTo": "Updated to {version}",
+    "relaunchToApply": "Relaunch to apply",
+    "relaunch": "Relaunch",
+    "user": "User",
+    "freePlan": "Free plan",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "dismissOnboarding": "Dismiss"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "cowork": "Cowork",
+    "code": "Code"
+  },
+  "greeting": {
+    "title": "Let's knock something off your list",
+    "subtitle": "Cowork is in research preview. Learn how to use it safely."
+  },
+  "folderPicker": {
+    "workInProject": "Work in a project",
+    "browse": "Browse...",
+    "recentFolders": "Recent folders",
+    "noRecentFolders": "No recent folders"
+  },
+  "modelSelector": {
+    "opus": "Opus 4.6",
+    "opusDesc": "Most capable for ambitious work",
+    "sonnet": "Sonnet 4.6",
+    "sonnetDesc": "Most efficient for everyday tasks",
+    "haiku": "Haiku 4.5",
+    "haikuDesc": "Fastest for quick answers",
+    "extendedThinking": "Extended thinking",
+    "extendedThinkingDesc": "Think longer for complex tasks"
+  },
+  "questionDialog": {
+    "skip": "Skip",
+    "selected": "{count} selected",
+    "somethingElse": "Something else",
+    "of": "of"
+  },
+  "filePreview": {
+    "title": "File Preview",
+    "openInApp": "Open in app",
+    "openInAppFallback": "Open in default app",
+    "close": "Close preview",
+    "loading": "Loading preview...",
+    "error": "Could not load preview",
+    "libreofficeNotFound": "LibreOffice not found. Install it to preview PPTX files.",
+    "page": "Page {current} of {total}",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "preview": "Preview",
+    "unsupported": "Preview not available for this file type"
+  },
+  "skills": {
+    "title": "Skills",
+    "subtitle": "Available skills in your workspace",
+    "noSkills": "No skills found",
+    "noSkillsHint": "Add skills to .claude/skills/ in your workspace",
+    "loaded": "Loaded",
+    "closePanel": "Close skills panel"
+  }
+}
