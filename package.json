@@ -2,12 +2,13 @@
   "name": "claude-viber",
   "description": "Open-source desktop client for Claude Agent SDK",
   "type": "module",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "license": "MIT",
   "main": "out/main/index.js",
   "packageManager": "bun@1.3.2",
   "bin": {
-    "claude-viber": "./bin/claude-viber.js"
+    "claude-viber": "bin/claude-viber.js",
+    "claude-viber-app": "bin/claude-viber-app.js"
   },
   "files": [
     "bin",
